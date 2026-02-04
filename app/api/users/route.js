@@ -1,5 +1,8 @@
-import { getUsers } from '../../../scripts/db.js'
+import { getUsers } from '../../../lib/dynamodb.js'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  return Response.json(getUsers())
+  const users = await getUsers()
+  return Response.json(users)
 }

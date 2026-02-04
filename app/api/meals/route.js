@@ -1,11 +1,14 @@
-import { getMeals, setMeal } from '../../../scripts/db.js'
+import { getMeals, setMeal } from '../../../lib/dynamodb.js'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  return Response.json(getMeals())
+  const meals = await getMeals()
+  return Response.json(meals)
 }
 
 export async function POST(request) {
   const { date, type, meal, mealId } = await request.json()
-  setMeal(date, type, meal, mealId)
+  await setMeal(date, type, meal, mealId)
   return Response.json({ success: true })
 }

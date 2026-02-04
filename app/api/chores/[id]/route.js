@@ -1,22 +1,24 @@
-import { updateChore, deleteChore } from '../../../../scripts/db.js'
+import { updateChore, deleteChore } from '../../../../lib/dynamodb.js'
 
 export async function PATCH(request, { params }) {
+  const { id } = await params
   const body = await request.json()
   const updates = {}
   
   if (body.done !== undefined) {
-    updates.done = body.done ? 1 : 0
-    if (body.done) updates.completed_at = new Date().toISOString()
+    updates.done = body.done ? true : false
+    if (body.done) updates.completedAt = new Date().toISOString()
   }
   if (body.approved !== undefined) {
-    updates.approved = body.approved ? 1 : 0
+    updates.approved = body.approved ? true : false
   }
   
-  updateChore(params.id, updates)
+  await updateChore(id, updates)
   return Response.json({ ok: true })
 }
 
 export async function DELETE(request, { params }) {
-  deleteChore(params.id)
+  const { id } = await params
+  await deleteChore(id)
   return Response.json({ ok: true })
 }

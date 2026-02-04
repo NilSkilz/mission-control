@@ -1,13 +1,16 @@
 import { cookies } from 'next/headers'
-import { getUserById } from '../../../../scripts/db.js'
+import { getUserById } from '../../../../lib/dynamodb.js'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const userId = cookies().get('user_id')?.value
+  const cookieStore = await cookies()
+  const userId = cookieStore.get('user_id')?.value
   
   if (!userId) {
     return Response.json({ user: null })
   }
   
-  const user = getUserById(parseInt(userId))
+  const user = await getUserById(userId)
   return Response.json({ user: user || null })
 }
