@@ -5,7 +5,7 @@ import {
   SelectInput, SelectOption, SwitchInput, Modal 
 } from '../components/ui'
 import { PlusIcon } from '@radix-ui/react-icons'
-import { getChores, getEarnings, addChore, updateChore, deleteChore } from '../lib/data'
+import { getChores, getEarnings, addChore, updateChore, deleteChore, payOutChores } from '../lib/data'
 
 export default function ChoresPage() {
   const { user, users } = useUser()
@@ -111,6 +111,19 @@ export default function ChoresPage() {
                 <p className="text-white font-medium mt-2">{e.user.display_name}</p>
                 <p className="text-2xl font-bold text-teal-400">£{(e.total / 100).toFixed(2)}</p>
                 <p className="text-xs text-slate-400">{e.chores} chores</p>
+                {isParent && e.total > 0 && (
+                  <Button 
+                    size="sm" 
+                    variant="success" 
+                    className="mt-2"
+                    onClick={async () => {
+                      await payOutChores(e.user.id)
+                      loadData()
+                    }}
+                  >
+                    💸 Pay Out
+                  </Button>
+                )}
               </div>
             ))}
           </div>

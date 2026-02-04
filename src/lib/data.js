@@ -153,6 +153,32 @@ export async function deleteChore(id) {
   }
 }
 
+export async function payOutChores(userId) {
+  // Delete all approved paid chores for this user (they've been paid)
+  // For recurring chores, reset them instead of deleting
+  const chores = await getChores()
+  const userChores = chores.filter(c => 
+    (c.assignedTo === userId || c.assigned_to === userId) && 
+    c.approved && 
+    c.paid
+  )
+  
+  for (const chore of userChores) {
+    if (chore.recurring) {
+      // Reset recurring chore instead of deleting
+      await updateChore(chore.id, { 
+        done: false, 
+        approved: false, 
+        completedAt: null,
+        lastReset: new Date().toISOString()
+      })
+    } else {
+      // Delete one-time chores
+      await deleteChore(chore.id)
+    }
+  }
+}
+
 // ==================== MEALS ====================
 
 export async function getMeals() {
