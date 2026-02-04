@@ -4,6 +4,7 @@ frontend:
     preBuild:
       commands:
         - npm ci
+        - node scripts/setup-dynamodb.js
     build:
       commands:
         - npm run build
