@@ -1,14 +1,9 @@
 # Dependencies
 node_modules/
-.pnpm-store/
 
-# Next.js
-.next/
-out/
-
-# Build
+# Build output
 dist/
-build/
+.next/
 
 # Environment
 .env
@@ -16,19 +11,20 @@ build/
 .env.*.local
 
 # Amplify
-.amplify/
 amplify_outputs.json
+.amplify/
 
 # IDE
 .idea/
 .vscode/
 *.swp
+*.swo
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Debug
+# Debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

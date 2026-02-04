@@ -1,5 +1,6 @@
-'use client'
-import { UserAvatar, Button, NavLink } from './ui'
+import { useLocation, Link } from 'react-router-dom'
+import { useUser } from '../context/UserContext'
+import { UserAvatar, Button } from './ui'
 
 // Navigation items with role-based access
 const NAV_ITEMS = [
@@ -9,8 +10,29 @@ const NAV_ITEMS = [
   { href: '/calendar', key: 'calendar', label: 'Calendar', roles: ['parent', 'child'] },
 ]
 
-export default function Layout({ user, users, onLogout, currentPage, children }) {
+function NavLink({ href, active, children }) {
+  return (
+    <Link
+      to={href}
+      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+        active 
+          ? 'bg-teal-500/20 text-teal-400' 
+          : 'text-slate-400 hover:text-white hover:bg-slate-800'
+      }`}
+    >
+      {children}
+    </Link>
+  )
+}
+
+export default function Layout({ children }) {
+  const { user, logout } = useUser()
+  const location = useLocation()
+
   if (!user) return children
+
+  // Determine current page from path
+  const currentPage = location.pathname === '/' ? 'chores' : location.pathname.slice(1)
 
   // Filter navigation based on user role
   const visibleNav = NAV_ITEMS.filter(item => item.roles.includes(user.role))
@@ -38,7 +60,7 @@ export default function Layout({ user, users, onLogout, currentPage, children })
               <UserAvatar user={user} size="sm" />
               <span className="text-sm text-slate-300">{user.display_name}</span>
             </div>
-            <Button variant="ghost" size="sm" onClick={onLogout}>
+            <Button variant="ghost" size="sm" onClick={logout}>
               Logout
             </Button>
           </div>

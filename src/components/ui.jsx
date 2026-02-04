@@ -1,11 +1,10 @@
-'use client'
 import * as Checkbox from '@radix-ui/react-checkbox'
 import * as Select from '@radix-ui/react-select'
 import * as Dialog from '@radix-ui/react-dialog'
 import * as Tabs from '@radix-ui/react-tabs'
 import * as Avatar from '@radix-ui/react-avatar'
 import * as Switch from '@radix-ui/react-switch'
-import { CheckIcon, ChevronDownIcon, Cross2Icon, PlusIcon } from '@radix-ui/react-icons'
+import { CheckIcon, ChevronDownIcon, Cross2Icon } from '@radix-ui/react-icons'
 import { forwardRef } from 'react'
 
 // Avatar component
@@ -196,21 +195,5 @@ export function Badge({ variant = 'default', children, className = '' }) {
     <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${variants[variant]} ${className}`}>
       {children}
     </span>
-  )
-}
-
-// Navigation
-export function NavLink({ href, active, children }) {
-  return (
-    <a
-      href={href}
-      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-        active 
-          ? 'bg-teal-500/20 text-teal-400' 
-          : 'text-slate-400 hover:text-white hover:bg-slate-800'
-      }`}
-    >
-      {children}
-    </a>
   )
 }
