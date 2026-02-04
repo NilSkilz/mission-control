@@ -80,6 +80,11 @@ export default function ChoresPage() {
 
   const isParent = user?.role === 'parent'
   const children = users.filter(u => u.role === 'child')
+  
+  // Filter chores: parents see all, kids see only their own
+  const visibleChores = isParent 
+    ? chores 
+    : chores.filter(c => c.assigned_to === user?.id || c.assignedTo === user?.id)
 
   if (loading) {
     return (
@@ -92,13 +97,15 @@ export default function ChoresPage() {
   return (
     <div className="space-y-6">
       {/* Earnings Summary */}
-      {isParent && earnings.length > 0 && (
+      {earnings.length > 0 && (
         <Card>
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <span>💰</span> Earnings Summary
+            <span>💰</span> {isParent ? 'Earnings Summary' : 'My Earnings'}
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {earnings.map(e => (
+            {earnings
+              .filter(e => isParent || e.user.id === user?.id)
+              .map(e => (
               <div key={e.user.id} className="bg-slate-700/50 rounded-lg p-4 text-center">
                 <UserAvatar user={e.user} size="md" />
                 <p className="text-white font-medium mt-2">{e.user.display_name}</p>
@@ -123,14 +130,14 @@ export default function ChoresPage() {
       </div>
 
       {/* Chores List */}
-      {chores.length === 0 ? (
+      {visibleChores.length === 0 ? (
         <Card className="text-center py-12">
           <span className="text-4xl mb-4 block">🎉</span>
-          <p className="text-slate-400">No chores yet! Time to add some tasks.</p>
+          <p className="text-slate-400">{isParent ? 'No chores yet! Time to add some tasks.' : 'No chores for you right now!'}</p>
         </Card>
       ) : (
         <div className="space-y-3">
-          {chores.map(chore => {
+          {visibleChores.map(chore => {
             const assignee = users.find(u => u.id === chore.assigned_to || u.id === chore.assignedTo)
             const isMyChore = (chore.assigned_to === user.id) || (chore.assignedTo === user.id)
             const isDone = chore.done === 1 || chore.done === true
