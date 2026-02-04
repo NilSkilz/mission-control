@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 /**
- * Seed initial users for Mission Control
+ * Seed initial data for Mission Control
  * Run this after deploying to create the family users.
  * 
- * Usage: node scripts/seed-users.js
+ * Usage: node scripts/seed-data.js
+ * 
+ * This script is idempotent - safe to run multiple times.
+ * It checks if users exist before creating them.
  * 
  * Note: Requires amplify_outputs.json to be present.
  * Run `npx ampx sandbox` first for local dev, or run after deployment.

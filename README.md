@@ -35,9 +35,9 @@ Family task management app built with Next.js and AWS Amplify Gen2.
    npx ampx sandbox
    ```
 
-3. In another terminal, seed the initial users:
+3. In another terminal, seed the initial data:
    ```bash
-   node scripts/seed-users.js
+   node scripts/seed-data.js
    ```
 
 4. Start the Next.js dev server:
@@ -81,7 +81,7 @@ This app is designed to deploy on AWS Amplify Hosting:
 ├── lib/
 │   └── data.js            # Amplify Data client wrapper
 └── scripts/
-    └── seed-users.js      # User seeding script
+    └── seed-data.js       # Data seeding script (idempotent)
 ```
 
 ## Data Models
