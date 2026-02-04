@@ -247,11 +247,11 @@ export default function MealsPage() {
           <div>
             <label className="block text-sm text-slate-400 mb-1">Choose a meal</label>
             <SelectInput 
-              value={selectedMealId} 
-              onValueChange={handleMealSelect}
+              value={selectedMealId || '__custom__'} 
+              onValueChange={v => handleMealSelect(v === '__custom__' ? '' : v)}
               placeholder="Select from database..."
             >
-              <SelectOption value="">— Custom meal —</SelectOption>
+              <SelectOption value="__custom__">— Custom meal —</SelectOption>
               {Object.entries(mealsByCategory).map(([category, categoryMeals]) => (
                 categoryMeals.map(meal => (
                   <SelectOption key={meal.id} value={meal.id}>
