@@ -8,16 +8,35 @@ const schema = a.schema({
     avatar: a.string(),
   }).authorization(allow => [allow.publicApiKey()]),
 
+  // Template chores that can be quickly assigned
+  ChoreTemplate: a.model({
+    title: a.string().required(),
+    defaultAmount: a.float().default(0), // in pence
+    paid: a.boolean().default(false),
+    suggestedRecurring: a.string(), // 'daily' | 'weekly' | null
+  }).authorization(allow => [allow.publicApiKey()]),
+
+  // Active assigned chores
   Chore: a.model({
     title: a.string().required(),
     assignedTo: a.string().required(), // User ID
     paid: a.boolean().default(false),
     amount: a.float().default(0),
-    done: a.boolean().default(false),
-    approved: a.boolean().default(false),
-    completedAt: a.string(),
     recurring: a.string(), // 'daily' | 'weekly' | null
-    lastReset: a.string(),
+    templateId: a.string(), // optional link to ChoreTemplate
+  }).authorization(allow => [allow.publicApiKey()]),
+
+  // Completion log - one record per completion
+  ChoreCompletion: a.model({
+    choreId: a.string().required(),
+    userId: a.string().required(),
+    choreTitle: a.string().required(), // denormalized for easy display
+    amount: a.float().default(0),
+    completedAt: a.string().required(),
+    approved: a.boolean().default(false),
+    approvedAt: a.string(),
+    paidOut: a.boolean().default(false),
+    paidAt: a.string(),
   }).authorization(allow => [allow.publicApiKey()]),
 
   Meal: a.model({

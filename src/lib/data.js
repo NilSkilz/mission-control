@@ -73,6 +73,49 @@ export async function createUser(user) {
   return data.id
 }
 
+// ==================== CHORE TEMPLATES ====================
+
+export async function getChoreTemplates() {
+  const c = await getClient()
+  if (!c) return []
+  
+  try {
+    const { data, errors } = await c.models.ChoreTemplate.list()
+    if (errors) {
+      console.error('Error fetching chore templates:', errors)
+      return []
+    }
+    return data || []
+  } catch (e) {
+    console.warn('getChoreTemplates failed:', e.message)
+    return []
+  }
+}
+
+export async function addChoreTemplate(template) {
+  const c = await requireClient()
+  const { data, errors } = await c.models.ChoreTemplate.create({
+    title: template.title,
+    defaultAmount: template.defaultAmount || 0,
+    paid: template.paid || false,
+    suggestedRecurring: template.suggestedRecurring || null,
+  })
+  if (errors) {
+    console.error('Error creating chore template:', errors)
+    throw new Error('Failed to create chore template')
+  }
+  return data.id
+}
+
+export async function deleteChoreTemplate(id) {
+  const c = await requireClient()
+  const { errors } = await c.models.ChoreTemplate.delete({ id })
+  if (errors) {
+    console.error('Error deleting chore template:', errors)
+    throw new Error('Failed to delete chore template')
+  }
+}
+
 // ==================== CHORES ====================
 
 export async function getChores() {
@@ -109,11 +152,8 @@ export async function addChore(chore) {
     assignedTo: chore.assigned_to || chore.assignedTo,
     paid: chore.paid ? true : false,
     amount: chore.amount || 0,
-    done: false,
-    approved: false,
-    completedAt: null,
     recurring: chore.recurring || null,
-    lastReset: null,
+    templateId: chore.templateId || null,
   })
   if (errors) {
     console.error('Error creating chore:', errors)
@@ -128,8 +168,7 @@ export async function updateChore(id, updates) {
   const cleanUpdates = {}
   for (const [key, value] of Object.entries(updates)) {
     const dbKey = key === 'assigned_to' ? 'assignedTo'
-               : key === 'completed_at' ? 'completedAt'
-               : key === 'last_reset' ? 'lastReset'
+               : key === 'template_id' ? 'templateId'
                : key
     cleanUpdates[dbKey] = value
   }
@@ -153,30 +192,140 @@ export async function deleteChore(id) {
   }
 }
 
-export async function payOutChores(userId) {
-  // Delete all approved paid chores for this user (they've been paid)
-  // For recurring chores, reset them instead of deleting
-  const chores = await getChores()
-  const userChores = chores.filter(c => 
-    (c.assignedTo === userId || c.assigned_to === userId) && 
-    c.approved && 
-    c.paid
-  )
+// ==================== CHORE COMPLETIONS ====================
+
+export async function getChoreCompletions() {
+  const c = await getClient()
+  if (!c) return []
   
-  for (const chore of userChores) {
-    if (chore.recurring) {
-      // Reset recurring chore instead of deleting
-      await updateChore(chore.id, { 
-        done: false, 
-        approved: false, 
-        completedAt: null,
-        lastReset: new Date().toISOString()
-      })
-    } else {
-      // Delete one-time chores
-      await deleteChore(chore.id)
+  try {
+    const { data, errors } = await c.models.ChoreCompletion.list()
+    if (errors) {
+      console.error('Error fetching chore completions:', errors)
+      return []
+    }
+    return data || []
+  } catch (e) {
+    console.warn('getChoreCompletions failed:', e.message)
+    return []
+  }
+}
+
+export async function getCompletionsForUser(userId) {
+  const c = await getClient()
+  if (!c) return []
+  
+  try {
+    const { data, errors } = await c.models.ChoreCompletion.list({
+      filter: { userId: { eq: userId } },
+    })
+    if (errors) {
+      console.error('Error fetching completions for user:', errors)
+      return []
+    }
+    return data || []
+  } catch (e) {
+    console.warn('getCompletionsForUser failed:', e.message)
+    return []
+  }
+}
+
+export async function getCompletionsForChore(choreId) {
+  const c = await getClient()
+  if (!c) return []
+  
+  try {
+    const { data, errors } = await c.models.ChoreCompletion.list({
+      filter: { choreId: { eq: choreId } },
+    })
+    if (errors) {
+      console.error('Error fetching completions for chore:', errors)
+      return []
+    }
+    return data || []
+  } catch (e) {
+    console.warn('getCompletionsForChore failed:', e.message)
+    return []
+  }
+}
+
+// Mark a chore as done - creates a ChoreCompletion record
+export async function markChoreDone(choreId) {
+  const c = await requireClient()
+  
+  // Get the chore details
+  const chore = await getChoreById(choreId)
+  if (!chore) {
+    throw new Error('Chore not found')
+  }
+  
+  // Create a completion record
+  const now = new Date().toISOString()
+  const { data, errors } = await c.models.ChoreCompletion.create({
+    choreId: choreId,
+    userId: chore.assignedTo,
+    choreTitle: chore.title,
+    amount: chore.paid ? (chore.amount || 0) : 0,
+    completedAt: now,
+    approved: false,
+    approvedAt: null,
+    paidOut: false,
+    paidAt: null,
+  })
+  
+  if (errors) {
+    console.error('Error creating chore completion:', errors)
+    throw new Error('Failed to mark chore as done')
+  }
+  
+  return data.id
+}
+
+// Approve a completion
+export async function approveCompletion(completionId) {
+  const c = await requireClient()
+  const { errors } = await c.models.ChoreCompletion.update({
+    id: completionId,
+    approved: true,
+    approvedAt: new Date().toISOString(),
+  })
+  if (errors) {
+    console.error('Error approving completion:', errors)
+    throw new Error('Failed to approve completion')
+  }
+}
+
+// Delete a completion (for undoing accidental marks)
+export async function deleteCompletion(completionId) {
+  const c = await requireClient()
+  const { errors } = await c.models.ChoreCompletion.delete({ id: completionId })
+  if (errors) {
+    console.error('Error deleting completion:', errors)
+    throw new Error('Failed to delete completion')
+  }
+}
+
+// Pay out all approved unpaid completions for a user
+export async function payOutChores(userId) {
+  const c = await requireClient()
+  const completions = await getCompletionsForUser(userId)
+  const now = new Date().toISOString()
+  
+  // Find all approved but unpaid completions
+  const toPay = completions.filter(comp => comp.approved && !comp.paidOut)
+  
+  for (const completion of toPay) {
+    const { errors } = await c.models.ChoreCompletion.update({
+      id: completion.id,
+      paidOut: true,
+      paidAt: now,
+    })
+    if (errors) {
+      console.error('Error marking completion as paid:', errors)
     }
   }
+  
+  return toPay.length
 }
 
 // ==================== MEALS ====================
@@ -328,23 +477,75 @@ export async function clearCheckedItems() {
 
 // ==================== EARNINGS ====================
 
+// Get earnings: sum of unpaid approved completions per child
 export async function getEarnings() {
   const users = await getUsers()
-  const chores = await getChores()
+  const completions = await getChoreCompletions()
   const children = users.filter((u) => u.role === 'child')
 
   return children.map((child) => {
-    const approvedChores = chores.filter(
-      (c) => c.assignedTo === child.id && c.approved && c.paid
+    // Find all approved but unpaid completions for this child
+    const unpaidCompletions = completions.filter(
+      (c) => c.userId === child.id && c.approved && !c.paidOut
     )
-    const total = approvedChores.reduce((sum, c) => sum + (c.amount || 0), 0)
+    const total = unpaidCompletions.reduce((sum, c) => sum + (c.amount || 0), 0)
     return {
       user: {
         ...child,
         display_name: child.displayName || child.display_name,
       },
       total,
-      chores: approvedChores.length,
+      chores: unpaidCompletions.length,
     }
+  })
+}
+
+// Helper: get start of today (YYYY-MM-DD)
+export function getToday() {
+  return new Date().toISOString().split('T')[0]
+}
+
+// Helper: get start of this week (Monday)
+export function getWeekStart() {
+  const now = new Date()
+  const day = now.getDay()
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1) // Adjust for Sunday
+  const monday = new Date(now.setDate(diff))
+  return monday.toISOString().split('T')[0]
+}
+
+// Helper: check if a chore has been completed today
+export function hasCompletionToday(completions, choreId) {
+  const today = getToday()
+  return completions.some(c => {
+    const completedDate = c.completedAt?.split('T')[0]
+    return c.choreId === choreId && completedDate === today
+  })
+}
+
+// Helper: get today's completion for a chore (if exists)
+export function getTodayCompletion(completions, choreId) {
+  const today = getToday()
+  return completions.find(c => {
+    const completedDate = c.completedAt?.split('T')[0]
+    return c.choreId === choreId && completedDate === today
+  })
+}
+
+// Helper: check if a chore has been completed this week (since Monday)
+export function hasCompletionThisWeek(completions, choreId) {
+  const weekStart = getWeekStart()
+  return completions.some(c => {
+    const completedDate = c.completedAt?.split('T')[0]
+    return c.choreId === choreId && completedDate >= weekStart
+  })
+}
+
+// Helper: get this week's completion for a chore (if exists)
+export function getThisWeekCompletion(completions, choreId) {
+  const weekStart = getWeekStart()
+  return completions.find(c => {
+    const completedDate = c.completedAt?.split('T')[0]
+    return c.choreId === choreId && completedDate >= weekStart
   })
 }
