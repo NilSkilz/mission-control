@@ -1,39 +1,42 @@
 import { Amplify } from 'aws-amplify'
 import { generateClient } from 'aws-amplify/data'
 
-// Try to configure Amplify - file may not exist in dev without sandbox
+// Amplify config - loaded at runtime from static file
 let amplifyConfigured = false
+let client = null
+let configPromise = null
+
 async function configureAmplify() {
-  if (amplifyConfigured) return
-  try {
-    // Vite needs the full path for dynamic imports
-    const response = await fetch('/amplify_outputs.json')
-    if (response.ok) {
+  if (amplifyConfigured) return true
+  if (configPromise) return configPromise
+  
+  configPromise = (async () => {
+    try {
+      const response = await fetch('/amplify_outputs.json')
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
       const outputs = await response.json()
       Amplify.configure(outputs)
+      client = generateClient()
       amplifyConfigured = true
       console.log('Amplify configured successfully')
+      return true
+    } catch (e) {
+      console.warn('amplify_outputs.json not available:', e.message)
+      console.warn('Data features will be disabled')
+      return false
     }
-  } catch (e) {
-    console.warn('amplify_outputs.json not available - using mock data')
-  }
+  })()
+  
+  return configPromise
 }
 
-// Lazy-init client
-let client = null
+// Initialize on module load
+configureAmplify()
 
 async function getClient() {
-  if (!amplifyConfigured) {
-    await configureAmplify()
-  }
-  if (!client && amplifyConfigured) {
-    try {
-      client = generateClient()
-    } catch (e) {
-      console.warn('Could not create Amplify client:', e.message)
-      return null
-    }
-  }
+  await configureAmplify()
   return client
 }
 
