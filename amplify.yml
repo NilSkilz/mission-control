@@ -10,13 +10,9 @@ frontend:
     preBuild:
       commands:
         - npm ci --cache .npm --prefer-offline
-        # Copy Amplify outputs to public folder for runtime access
-        - cp amplify_outputs.json public/amplify_outputs.json 2>/dev/null || echo "amplify_outputs.json not found yet"
     build:
       commands:
         - npm run build
-        # Also copy to dist after build in case needed
-        - cp amplify_outputs.json dist/amplify_outputs.json 2>/dev/null || true
   artifacts:
     baseDirectory: dist
     files:

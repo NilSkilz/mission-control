@@ -1,42 +1,10 @@
-import { Amplify } from 'aws-amplify'
 import { generateClient } from 'aws-amplify/data'
 
-// Amplify config - loaded at runtime from static file
-let amplifyConfigured = false
-let client = null
-let configPromise = null
-
-async function configureAmplify() {
-  if (amplifyConfigured) return true
-  if (configPromise) return configPromise
-  
-  configPromise = (async () => {
-    try {
-      const response = await fetch('/amplify_outputs.json')
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`)
-      }
-      const outputs = await response.json()
-      Amplify.configure(outputs)
-      client = generateClient()
-      amplifyConfigured = true
-      console.log('Amplify configured successfully')
-      return true
-    } catch (e) {
-      console.warn('amplify_outputs.json not available:', e.message)
-      console.warn('Data features will be disabled')
-      return false
-    }
-  })()
-  
-  return configPromise
-}
-
-// Initialize on module load
-configureAmplify()
+// Amplify is configured in main.jsx at startup
+// Generate the client once
+const client = generateClient()
 
 async function getClient() {
-  await configureAmplify()
   return client
 }
 
