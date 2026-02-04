@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { getUserByUsername } from '../../../../lib/dynamodb.js'
+import { getUserByUsername } from '../../../../lib/data.js'
 
 // Hardcoded passwords per user
 const PASSWORDS = {

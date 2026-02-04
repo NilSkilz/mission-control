@@ -1,4 +1,4 @@
-import { getShoppingItems, addShoppingItem, clearCheckedItems } from '../../../lib/dynamodb.js'
+import { getShoppingItems, addShoppingItem, clearCheckedItems } from '../../../lib/data.js'
 import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'

@@ -1,4 +1,4 @@
-import { getChores, addChore, resetRecurringChores } from '../../../lib/dynamodb.js'
+import { getChores, addChore, resetRecurringChores } from '../../../lib/data.js'
 
 export const dynamic = 'force-dynamic'
 

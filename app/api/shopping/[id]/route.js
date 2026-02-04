@@ -1,4 +1,4 @@
-import { updateShoppingItem, deleteShoppingItem } from '../../../../lib/dynamodb.js'
+import { updateShoppingItem, deleteShoppingItem } from '../../../../lib/data.js'
 
 export async function PATCH(request, { params }) {
   const { id } = await params

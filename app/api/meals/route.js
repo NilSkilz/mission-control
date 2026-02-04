@@ -1,4 +1,4 @@
-import { getMeals, setMeal } from '../../../lib/dynamodb.js'
+import { getMeals, setMeal } from '../../../lib/data.js'
 
 export const dynamic = 'force-dynamic'
 

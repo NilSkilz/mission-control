@@ -1,4 +1,4 @@
-import { updateChore, deleteChore } from '../../../../lib/dynamodb.js'
+import { updateChore, deleteChore } from '../../../../lib/data.js'
 
 export async function PATCH(request, { params }) {
   const { id } = await params

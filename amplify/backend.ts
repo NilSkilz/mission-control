@@ -1,16 +1,16 @@
 import { defineBackend } from '@aws-amplify/backend';
+import { data } from './data/resource';
 
 /**
  * Amplify Gen2 Backend Configuration
  * 
- * This project uses a simplified DynamoDB setup without Amplify-managed auth.
- * Tables are created manually via the setup-dynamodb.js script.
- * 
- * To deploy to AWS:
- * 1. Run `npm run setup-dynamodb` to create tables
- * 2. Deploy the Next.js app to Amplify Hosting
+ * This project uses Amplify Gen2 Data with publicApiKey authorization.
+ * Tables are auto-created by Amplify on deploy - no manual scripts needed.
  * 
  * The app uses cookie-based auth with hardcoded passwords (family app).
+ * This is NOT using Cognito - just simple password auth.
  */
 
-export const backend = defineBackend({});
+export const backend = defineBackend({
+  data,
+});

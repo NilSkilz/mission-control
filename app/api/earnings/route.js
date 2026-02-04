@@ -1,4 +1,4 @@
-import { getEarnings } from '../../../lib/dynamodb.js'
+import { getEarnings } from '../../../lib/data.js'
 
 export const dynamic = 'force-dynamic'
 

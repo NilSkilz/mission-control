@@ -1,4 +1,4 @@
-import { getUsers } from '../../../lib/dynamodb.js'
+import { getUsers } from '../../../lib/data.js'
 
 export const dynamic = 'force-dynamic'
 
