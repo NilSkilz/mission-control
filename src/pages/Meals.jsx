@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useUser } from '../context/UserContext'
 import { Button, Card, Input, Modal, SelectInput, SelectOption, Badge } from '../components/ui'
-import { ChevronLeftIcon, ChevronRightIcon, Pencil1Icon, PlusIcon } from '@radix-ui/react-icons'
+import { ChevronLeftIcon, ChevronRightIcon, Pencil1Icon, PlusIcon, MagicWandIcon } from '@radix-ui/react-icons'
 import { MEALS, MEAL_TAGS, getMealById, getMealsByCategory, formatIngredient } from '../lib/meals-data'
 import { getMeals, setMeal, addShoppingItem } from '../lib/data'
+import { suggestMealsForWeek } from '../lib/meal-suggestions'
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'dinner']
 const MEAL_ICONS = { breakfast: '🌅', lunch: '☀️', dinner: '🌙' }
@@ -44,6 +45,7 @@ export default function MealsPage() {
   const [editValue, setEditValue] = useState('')
   const [selectedMealId, setSelectedMealId] = useState('')
   const [addingToList, setAddingToList] = useState(false)
+  const [suggesting, setSuggesting] = useState(false)
 
   const loadData = async () => {
     try {
@@ -114,6 +116,35 @@ export default function MealsPage() {
     setAddingToList(false)
   }
 
+  const handleSuggestMeals = async () => {
+    setSuggesting(true)
+    try {
+      // Build map of existing meals for this week (dinner only)
+      const existingMeals = {}
+      weekDates.forEach(date => {
+        const dateStr = formatDate(date)
+        const meal = getMealForSlot(date, 'dinner')
+        existingMeals[dateStr] = meal
+      })
+
+      // Get suggestions
+      const suggestions = suggestMealsForWeek(weekDates, existingMeals)
+
+      // Apply suggestions (only for days without existing meals)
+      for (const [dateStr, suggestion] of Object.entries(suggestions)) {
+        if (suggestion) {
+          await setMeal(dateStr, 'dinner', suggestion.mealName, suggestion.mealId)
+        }
+      }
+
+      // Reload data
+      await loadData()
+    } catch (e) {
+      console.error('Error suggesting meals:', e)
+    }
+    setSuggesting(false)
+  }
+
   const weekDates = getWeekDates(weekOffset)
   const today = formatDate(new Date())
   const mealsByCategory = getMealsByCategory()
@@ -130,11 +161,21 @@ export default function MealsPage() {
   return (
     <div className="space-y-6">
       {/* Week Navigation */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-xl font-semibold text-white flex items-center gap-2">
           <span>🍽️</span> Meal Planner
         </h2>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            onClick={handleSuggestMeals}
+            disabled={suggesting}
+            className="mr-2"
+          >
+            <MagicWandIcon className="w-4 h-4" />
+            {suggesting ? 'Thinking...' : 'Suggest Dinners'}
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => setWeekOffset(w => w - 1)}>
             <ChevronLeftIcon className="w-4 h-4" />
           </Button>
