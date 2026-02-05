@@ -53,6 +53,19 @@ const schema = a.schema({
     addedBy: a.string(), // User ID
     checked: a.boolean().default(false),
   }).authorization(allow => [allow.publicApiKey()]),
+
+  // Custom meal recipes (the "recipe book")
+  MealRecipe: a.model({
+    name: a.string().required(),
+    category: a.string().required(),
+    tags: a.string().array(), // array of tag IDs from MEAL_TAGS
+    serves: a.string(),
+    time: a.string(),
+    day: a.string(), // suggested day (e.g., "Sunday", "Weekend")
+    note: a.string(),
+    ingredients: a.string(), // JSON string of [{name, quantity}]
+    isCustom: a.boolean().default(true), // false = seeded from static data
+  }).authorization(allow => [allow.publicApiKey()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;

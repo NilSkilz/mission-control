@@ -401,6 +401,93 @@ export async function setMeal(date, mealType, meal, mealId = null) {
   }
 }
 
+// ==================== MEAL RECIPES (Recipe Book) ====================
+
+export async function getMealRecipes() {
+  const c = await getClient()
+  if (!c) return []
+  
+  try {
+    const { data, errors } = await c.models.MealRecipe.list()
+    if (errors) {
+      console.error('Error fetching meal recipes:', errors)
+      return []
+    }
+    return (data || []).map(recipe => ({
+      ...recipe,
+      // Parse ingredients from JSON string
+      ingredients: recipe.ingredients ? JSON.parse(recipe.ingredients) : [],
+      tags: recipe.tags || [],
+    }))
+  } catch (e) {
+    console.warn('getMealRecipes failed:', e.message)
+    return []
+  }
+}
+
+export async function getMealRecipeById(id) {
+  const c = await requireClient()
+  const { data, errors } = await c.models.MealRecipe.get({ id })
+  if (errors) {
+    console.error('Error fetching meal recipe:', errors)
+    return null
+  }
+  if (!data) return null
+  return {
+    ...data,
+    ingredients: data.ingredients ? JSON.parse(data.ingredients) : [],
+    tags: data.tags || [],
+  }
+}
+
+export async function addMealRecipe(recipe) {
+  const c = await requireClient()
+  const { data, errors } = await c.models.MealRecipe.create({
+    name: recipe.name,
+    category: recipe.category,
+    tags: recipe.tags || [],
+    serves: recipe.serves || null,
+    time: recipe.time || null,
+    day: recipe.day || null,
+    note: recipe.note || null,
+    ingredients: JSON.stringify(recipe.ingredients || []),
+    isCustom: recipe.isCustom !== false, // default true
+  })
+  if (errors) {
+    console.error('Error creating meal recipe:', errors)
+    throw new Error('Failed to create meal recipe')
+  }
+  return data.id
+}
+
+export async function updateMealRecipe(id, updates) {
+  const c = await requireClient()
+  const cleanUpdates = { ...updates }
+  
+  // Convert ingredients array to JSON string if present
+  if (cleanUpdates.ingredients && Array.isArray(cleanUpdates.ingredients)) {
+    cleanUpdates.ingredients = JSON.stringify(cleanUpdates.ingredients)
+  }
+
+  const { errors } = await c.models.MealRecipe.update({
+    id,
+    ...cleanUpdates,
+  })
+  if (errors) {
+    console.error('Error updating meal recipe:', errors)
+    throw new Error('Failed to update meal recipe')
+  }
+}
+
+export async function deleteMealRecipe(id) {
+  const c = await requireClient()
+  const { errors } = await c.models.MealRecipe.delete({ id })
+  if (errors) {
+    console.error('Error deleting meal recipe:', errors)
+    throw new Error('Failed to delete meal recipe')
+  }
+}
+
 // ==================== SHOPPING ====================
 
 export async function getShoppingItems() {

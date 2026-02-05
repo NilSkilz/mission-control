@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useUser } from '../context/UserContext'
 import { Button, Card, Input, Modal, SelectInput, SelectOption, Badge } from '../components/ui'
-import { ChevronLeftIcon, ChevronRightIcon, Pencil1Icon, PlusIcon, MagicWandIcon } from '@radix-ui/react-icons'
-import { MEALS, MEAL_TAGS, getMealById, getMealsByCategory, formatIngredient } from '../lib/meals-data'
-import { getMeals, setMeal, addShoppingItem } from '../lib/data'
+import { ChevronLeftIcon, ChevronRightIcon, Pencil1Icon, PlusIcon, MagicWandIcon, ReaderIcon } from '@radix-ui/react-icons'
+import { MEALS, MEAL_TAGS, getMealById as getStaticMealById, getMealsByCategory as getStaticMealsByCategory, formatIngredient } from '../lib/meals-data'
+import { getMeals, setMeal, addShoppingItem, getMealRecipes } from '../lib/data'
 import { suggestMealsForWeek } from '../lib/meal-suggestions'
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'dinner']
@@ -39,6 +40,7 @@ function formatDayNum(date) {
 export default function MealsPage() {
   const { user } = useUser()
   const [meals, setMeals] = useState([])
+  const [allRecipes, setAllRecipes] = useState([]) // Combined static + custom recipes
   const [weekOffset, setWeekOffset] = useState(0)
   const [loading, setLoading] = useState(true)
   const [editModal, setEditModal] = useState(null) // { date, type }
@@ -49,20 +51,49 @@ export default function MealsPage() {
 
   const loadData = async () => {
     try {
-      const mealsData = await getMeals()
-      // Normalize field names
+      const [mealsData, customRecipes] = await Promise.all([
+        getMeals(),
+        getMealRecipes(),
+      ])
+      // Normalize meal plan field names
       setMeals(mealsData.map(m => ({
         ...m,
         type: m.mealType || m.type,
         meal_id: m.mealId || m.meal_id,
       })))
+      // Combine static meals with custom recipes
+      const staticMeals = MEALS.map(m => ({ ...m, id: `static:${m.id}` }))
+      setAllRecipes([...staticMeals, ...customRecipes])
     } catch (e) {
       console.error('Error loading meals:', e)
+      // Fall back to just static meals
+      setAllRecipes(MEALS.map(m => ({ ...m, id: `static:${m.id}` })))
     }
     setLoading(false)
   }
 
   useEffect(() => { loadData() }, [])
+  
+  // Helper: get meal by ID (static or custom)
+  const getMealById = (id) => {
+    if (!id) return null
+    // Check if it's a static meal reference (either prefixed or not)
+    const staticMeal = getStaticMealById(id) || getStaticMealById(id.replace('static:', ''))
+    if (staticMeal) return staticMeal
+    // Check custom recipes
+    return allRecipes.find(r => r.id === id)
+  }
+  
+  // Helper: get meals grouped by category
+  const getMealsByCategory = () => {
+    const categories = {}
+    allRecipes.forEach(meal => {
+      const cat = meal.category || 'Other'
+      if (!categories[cat]) categories[cat] = []
+      categories[cat].push(meal)
+    })
+    return categories
+  }
 
   const getMealForSlot = (date, type) => {
     const dateStr = formatDate(date)
@@ -166,6 +197,12 @@ export default function MealsPage() {
           <span>🍽️</span> Meal Planner
         </h2>
         <div className="flex items-center gap-2">
+          <Link to="/meals/manage">
+            <Button variant="ghost" size="sm" className="mr-2">
+              <ReaderIcon className="w-4 h-4" />
+              Recipe Book
+            </Button>
+          </Link>
           <Button 
             variant="secondary" 
             size="sm" 
