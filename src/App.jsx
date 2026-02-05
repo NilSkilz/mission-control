@@ -4,6 +4,7 @@ import LoginScreen from './components/LoginScreen'
 import Layout from './components/Layout'
 import ChoresPage from './pages/Chores'
 import MealsPage from './pages/Meals'
+import MealsManagerPage from './pages/MealsManager'
 import ShoppingPage from './pages/Shopping'
 import CalendarPage from './pages/Calendar'
 
@@ -54,6 +55,13 @@ function AppRoutes() {
         <ProtectedRoute requireParent>
           <Layout>
             <MealsPage />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/meals/manage" element={
+        <ProtectedRoute requireParent>
+          <Layout>
+            <MealsManagerPage />
           </Layout>
         </ProtectedRoute>
       } />
