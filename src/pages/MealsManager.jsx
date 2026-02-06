@@ -459,7 +459,7 @@ export default function MealsManagerPage() {
                   placeholder="Ingredient name"
                   value={newIngredient.name}
                   onChange={e => setNewIngredient(prev => ({ ...prev, name: e.target.value }))}
-                  className="flex-1"
+                  className="flex-1 min-w-[200px]"
                   onKeyDown={e => e.key === 'Enter' && handleAddIngredient()}
                 />
                 <Input
