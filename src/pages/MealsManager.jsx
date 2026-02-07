@@ -86,10 +86,25 @@ export default function MealsManagerPage() {
       time: recipe.time || '',
       day: recipe.day || '',
       note: recipe.note || '',
-      ingredients: recipe.ingredients || [],
+      ingredients: [...(recipe.ingredients || [])], // Deep copy ingredients array
     })
     setNewIngredient({ name: '', quantity: '' })
     setEditModal(recipe)
+  }
+
+  const createEditableCopy = (recipe) => {
+    setFormData({
+      name: `${recipe.name} (Copy)`,
+      category: recipe.category || CATEGORIES[0],
+      tags: recipe.tags || [],
+      serves: recipe.serves || '',
+      time: recipe.time || '',
+      day: recipe.day || '',
+      note: recipe.note || '',
+      ingredients: [...(recipe.ingredients || [])], // Deep copy ingredients array
+    })
+    setNewIngredient({ name: '', quantity: '' })
+    setEditModal('new') // Treat as new recipe so it creates a copy
   }
 
   const handleTagToggle = (tagId) => {
@@ -117,6 +132,15 @@ export default function MealsManagerPage() {
     setFormData(prev => ({
       ...prev,
       ingredients: prev.ingredients.filter((_, i) => i !== index),
+    }))
+  }
+
+  const handleUpdateIngredient = (index, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      ingredients: prev.ingredients.map((ing, i) => 
+        i === index ? { ...ing, [field]: value || null } : ing
+      ),
     }))
   }
 
@@ -284,22 +308,43 @@ export default function MealsManagerPage() {
 
                 {/* Action buttons */}
                 <div className="mt-3 pt-3 border-t border-slate-700 flex gap-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => openEditModal(recipe)}
-                    className="flex-1"
-                  >
-                    <Pencil1Icon className="w-4 h-4" /> {recipe.id?.startsWith('static:') ? 'View' : 'Edit'}
-                  </Button>
-                  {!recipe.id?.startsWith('static:') && (
-                    <Button 
-                      variant="danger" 
-                      size="sm" 
-                      onClick={() => setDeleteConfirm(recipe)}
-                    >
-                      <TrashIcon className="w-4 h-4" />
-                    </Button>
+                  {recipe.id?.startsWith('static:') ? (
+                    <>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => openEditModal(recipe)}
+                        className="flex-1"
+                      >
+                        <Pencil1Icon className="w-4 h-4" /> View
+                      </Button>
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        onClick={() => createEditableCopy(recipe)}
+                        className="flex-1"
+                      >
+                        <PlusIcon className="w-4 h-4" /> Edit Copy
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => openEditModal(recipe)}
+                        className="flex-1"
+                      >
+                        <Pencil1Icon className="w-4 h-4" /> Edit
+                      </Button>
+                      <Button 
+                        variant="danger" 
+                        size="sm" 
+                        onClick={() => setDeleteConfirm(recipe)}
+                      >
+                        <TrashIcon className="w-4 h-4" />
+                      </Button>
+                    </>
                   )}
                 </div>
               </Card>
@@ -427,24 +472,63 @@ export default function MealsManagerPage() {
 
           {/* Ingredients */}
           <div>
-            <label className="block text-sm text-slate-400 mb-2">Ingredients</label>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-sm text-slate-400">
+                Ingredients ({formData.ingredients.length})
+              </label>
+              {!isStaticMeal && formData.ingredients.length > 0 && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setFormData(prev => ({ ...prev, ingredients: [] }))}
+                  className="text-red-400 hover:text-red-300"
+                >
+                  Clear All
+                </Button>
+              )}
+            </div>
             
-            {/* Existing ingredients */}
+            {/* Existing ingredients with inline editing */}
             {formData.ingredients.length > 0 && (
-              <div className="space-y-2 mb-3">
+              <div className="space-y-3 mb-4">
                 {formData.ingredients.map((ing, idx) => (
-                  <div key={idx} className="flex items-center gap-2 bg-slate-900/50 rounded-lg p-2">
-                    <span className="flex-1 text-white">{ing.name}</span>
-                    {ing.quantity && (
-                      <span className="text-slate-400 text-sm">{ing.quantity}</span>
-                    )}
-                    {!isStaticMeal && (
-                      <button
-                        onClick={() => handleRemoveIngredient(idx)}
-                        className="text-red-400 hover:text-red-300 p-1"
-                      >
-                        <TrashIcon className="w-4 h-4" />
-                      </button>
+                  <div key={idx} className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                    {isStaticMeal ? (
+                      <div className="flex items-center gap-3">
+                        <span className="flex-1 text-white font-medium">{ing.name}</span>
+                        {ing.quantity && (
+                          <span className="text-slate-400 text-sm bg-slate-800 px-2 py-1 rounded">
+                            {ing.quantity}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex gap-2 items-center">
+                          <Input
+                            type="text"
+                            placeholder="Ingredient name"
+                            value={ing.name}
+                            onChange={e => handleUpdateIngredient(idx, 'name', e.target.value)}
+                            className="flex-1 bg-slate-800 border-slate-600"
+                          />
+                          <Input
+                            type="text"
+                            placeholder="Quantity (optional)"
+                            value={ing.quantity || ''}
+                            onChange={e => handleUpdateIngredient(idx, 'quantity', e.target.value)}
+                            className="w-32 bg-slate-800 border-slate-600"
+                          />
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => handleRemoveIngredient(idx)}
+                            className="shrink-0"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -453,26 +537,75 @@ export default function MealsManagerPage() {
 
             {/* Add new ingredient */}
             {!isStaticMeal && (
-              <div className="flex gap-2">
-                <Input
-                  type="text"
-                  placeholder="Ingredient name"
-                  value={newIngredient.name}
-                  onChange={e => setNewIngredient(prev => ({ ...prev, name: e.target.value }))}
-                  className="flex-1 min-w-[200px]"
-                  onKeyDown={e => e.key === 'Enter' && handleAddIngredient()}
-                />
-                <Input
-                  type="text"
-                  placeholder="Qty"
-                  value={newIngredient.quantity}
-                  onChange={e => setNewIngredient(prev => ({ ...prev, quantity: e.target.value }))}
-                  className="w-24"
-                  onKeyDown={e => e.key === 'Enter' && handleAddIngredient()}
-                />
-                <Button variant="secondary" onClick={handleAddIngredient}>
-                  <PlusIcon className="w-4 h-4" />
-                </Button>
+              <div className="bg-slate-800/50 border-2 border-dashed border-slate-600 rounded-lg p-3">
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="Add ingredient name..."
+                    value={newIngredient.name}
+                    onChange={e => setNewIngredient(prev => ({ ...prev, name: e.target.value }))}
+                    className="flex-1 bg-slate-800 border-slate-600"
+                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleAddIngredient()}
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Quantity"
+                    value={newIngredient.quantity}
+                    onChange={e => setNewIngredient(prev => ({ ...prev, quantity: e.target.value }))}
+                    className="w-28 bg-slate-800 border-slate-600"
+                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleAddIngredient()}
+                  />
+                  <Button 
+                    variant="secondary" 
+                    onClick={handleAddIngredient}
+                    disabled={!newIngredient.name.trim()}
+                    className="shrink-0"
+                  >
+                    <PlusIcon className="w-4 h-4" />
+                  </Button>
+                </div>
+                
+                {/* Quick add common ingredients */}
+                <div className="mt-3 pt-3 border-t border-slate-700">
+                  <p className="text-xs text-slate-500 mb-2">Quick add common ingredients:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {[
+                      'Onion', 'Garlic', 'Salt & pepper', 'Olive oil', 'Butter', 
+                      'Eggs', 'Milk', 'Cheese', 'Pasta', 'Rice',
+                      'Potatoes', 'Carrots', 'Peas (frozen)', 'Chicken', 'Beef mince'
+                    ].map(ingredient => (
+                      <button
+                        key={ingredient}
+                        onClick={() => {
+                          if (!formData.ingredients.some(ing => ing.name.toLowerCase() === ingredient.toLowerCase())) {
+                            setFormData(prev => ({
+                              ...prev,
+                              ingredients: [...prev.ingredients, { name: ingredient, quantity: null }]
+                            }))
+                          }
+                        }}
+                        disabled={formData.ingredients.some(ing => ing.name.toLowerCase() === ingredient.toLowerCase())}
+                        className="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:text-slate-600 text-slate-300 rounded transition-colors"
+                      >
+                        {ingredient}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                <p className="text-xs text-slate-500 mt-2">
+                  Press Enter to add ingredient quickly
+                </p>
+              </div>
+            )}
+
+            {formData.ingredients.length === 0 && (
+              <div className="text-center py-8 text-slate-500">
+                <span className="text-2xl mb-2 block">🥗</span>
+                <p className="text-sm">No ingredients yet</p>
+                {!isStaticMeal && (
+                  <p className="text-xs mt-1">Add your first ingredient above</p>
+                )}
               </div>
             )}
           </div>
