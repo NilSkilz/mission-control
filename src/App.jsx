@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { UserProvider, useUser } from './context/UserContext'
 import LoginScreen from './components/LoginScreen'
 import Layout from './components/Layout'
+import Homepage from './pages/Homepage'
 import ChoresPage from './pages/Chores'
 import MealsPage from './pages/Meals'
 import MealsManagerPage from './pages/MealsManager'
@@ -20,11 +21,11 @@ function ProtectedRoute({ children, requireParent = false }) {
   }
   
   if (!user) {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/family/login" replace />
   }
   
   if (requireParent && user.role !== 'parent') {
-    return <Navigate to="/" replace />
+    return <Navigate to="/family/chores" replace />
   }
   
   return children
@@ -43,15 +44,19 @@ function AppRoutes() {
   
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginScreen />} />
-      <Route path="/" element={
+      {/* Public homepage - no auth required */}
+      <Route path="/" element={<Homepage />} />
+      
+      {/* Family app routes - auth required */}
+      <Route path="/family/login" element={user ? <Navigate to="/family/chores" replace /> : <LoginScreen />} />
+      <Route path="/family/chores" element={
         <ProtectedRoute>
           <Layout>
             <ChoresPage />
           </Layout>
         </ProtectedRoute>
       } />
-      <Route path="/meals" element={
+      <Route path="/family/meals" element={
         <ProtectedRoute requireParent>
           <Layout>
             <MealsPage />
@@ -65,20 +70,27 @@ function AppRoutes() {
           </Layout>
         </ProtectedRoute>
       } />
-      <Route path="/shopping" element={
+      <Route path="/family/shopping" element={
         <ProtectedRoute requireParent>
           <Layout>
             <ShoppingPage />
           </Layout>
         </ProtectedRoute>
       } />
-      <Route path="/calendar" element={
+      <Route path="/family/calendar" element={
         <ProtectedRoute>
           <Layout>
             <CalendarPage />
           </Layout>
         </ProtectedRoute>
       } />
+      
+      {/* Legacy redirects */}
+      <Route path="/login" element={<Navigate to="/family/login" replace />} />
+      <Route path="/meals" element={<Navigate to="/family/meals" replace />} />
+      <Route path="/shopping" element={<Navigate to="/family/shopping" replace />} />
+      <Route path="/calendar" element={<Navigate to="/family/calendar" replace />} />
+      
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
