@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useUser } from '../context/UserContext'
 import { Card, Button, Badge } from '../components/ui'
-import { ExternalLinkIcon, ThermometerIcon, ZapIcon, WifiIcon, CalendarIcon, ListBulletIcon } from '@radix-ui/react-icons'
+import { ExternalLinkIcon, CalendarIcon, ListBulletIcon } from '@radix-ui/react-icons'
+import { HomeStats, TeslaWidget, HAWeatherWidget, DeviceOverview } from '../components/HomeAssistantWidget'
 
 // Weather widget component
 function WeatherWidget() {
@@ -80,58 +81,17 @@ function WeatherWidget() {
   )
 }
 
-// Home stats component
-function HomeStats() {
-  // Placeholder data - will be replaced with real integrations later
-  const stats = [
-    {
-      icon: <ThermometerIcon className="w-5 h-5" />,
-      label: 'Living Room',
-      value: '21°C',
-      status: 'normal',
-      color: 'text-emerald-400'
-    },
-    {
-      icon: <ZapIcon className="w-5 h-5" />,
-      label: 'Power Usage',
-      value: '2.4 kW',
-      status: 'normal',
-      color: 'text-yellow-400'
-    },
-    {
-      icon: <WifiIcon className="w-5 h-5" />,
-      label: 'Network',
-      value: 'Online',
-      status: 'good',
-      color: 'text-emerald-400'
-    }
-  ]
-
-  return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-        🏠 Home Status
-      </h2>
-      <div className="space-y-3">
-        {stats.map((stat, index) => (
-          <Card key={index} className="bg-slate-800/50">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={stat.color}>{stat.icon}</div>
-                <div>
-                  <div className="text-slate-300 text-sm">{stat.label}</div>
-                  <div className={`font-semibold ${stat.color}`}>{stat.value}</div>
-                </div>
-              </div>
-              <Badge variant={stat.status === 'good' ? 'success' : 'default'}>
-                {stat.status === 'good' ? '●' : '○'}
-              </Badge>
-            </div>
-          </Card>
-        ))}
-      </div>
-    </div>
-  )
+// Enhanced weather widget that tries HA first, falls back to external
+function EnhancedWeatherWidget() {
+  // Try HA weather first, fallback to external
+  const haWeather = HAWeatherWidget()
+  
+  if (haWeather) {
+    return haWeather
+  }
+  
+  // Fallback to external weather
+  return <WeatherWidget />
 }
 
 // Service launcher component
@@ -285,7 +245,13 @@ export default function Homepage() {
       </div>
 
       {/* Weather Bar */}
-      <WeatherWidget />
+      <EnhancedWeatherWidget />
+
+      {/* Tesla & Device Status Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <TeslaWidget />
+        <DeviceOverview />
+      </div>
 
       {/* Main Three-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
