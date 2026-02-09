@@ -4,10 +4,11 @@ import { UserAvatar, Button } from './ui'
 
 // Navigation items with role-based access
 const NAV_ITEMS = [
-  { href: '/', key: 'chores', label: 'Chores', roles: ['parent', 'child'] },
-  { href: '/meals', key: 'meals', label: 'Meals', roles: ['parent'] },
-  { href: '/shopping', key: 'shopping', label: 'Shopping', roles: ['parent'] },
-  { href: '/calendar', key: 'calendar', label: 'Calendar', roles: ['parent', 'child'] },
+  { href: '/', key: 'home', label: 'Home', roles: ['parent', 'child'] },
+  { href: '/family/chores', key: 'chores', label: 'Chores', roles: ['parent', 'child'] },
+  { href: '/family/meals', key: 'meals', label: 'Meals', roles: ['parent'] },
+  { href: '/family/shopping', key: 'shopping', label: 'Shopping', roles: ['parent'] },
+  { href: '/family/calendar', key: 'calendar', label: 'Calendar', roles: ['parent', 'child'] },
 ]
 
 function NavLink({ href, active, children }) {
@@ -32,7 +33,15 @@ export default function Layout({ children }) {
   if (!user) return children
 
   // Determine current page from path
-  const currentPage = location.pathname === '/' ? 'chores' : location.pathname.slice(1)
+  const getCurrentPage = () => {
+    if (location.pathname === '/') return 'home'
+    if (location.pathname === '/family/chores') return 'chores'
+    if (location.pathname === '/family/meals') return 'meals'
+    if (location.pathname === '/family/shopping') return 'shopping'
+    if (location.pathname === '/family/calendar') return 'calendar'
+    return location.pathname.split('/').pop()
+  }
+  const currentPage = getCurrentPage()
 
   // Filter navigation based on user role
   const visibleNav = NAV_ITEMS.filter(item => item.roles.includes(user.role))
