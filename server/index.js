@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import { homeAssistantRoutes } from './routes/homeAssistant.js';
 import calendarRoutes from './routes/calendar.js';
 import todoRoutes from './routes/todo.js';
 
@@ -14,6 +15,7 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
+app.use('/api/ha', homeAssistantRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/todo', todoRoutes);
 

@@ -1,5 +1,6 @@
 import express from 'express';
-import { createClient, DAVAccount, DAVCalendar } from 'tsdav';
+import pkg from 'tsdav';
+const { createDAVClient } = pkg;
 import NodeCache from 'node-cache';
 
 const router = express.Router();
@@ -14,16 +15,18 @@ router.get('/events', async (req, res) => {
     }
 
     // Create CalDAV client
-    const account = await createClient({
-      server: 'https://caldav.icloud.com',
+    const client = await createDAVClient({
+      serverUrl: 'https://caldav.icloud.com',
       credentials: {
         username: process.env.CALDAV_USER,
         password: process.env.CALDAV_PASSWORD
-      }
+      },
+      authMethod: 'Basic',
+      defaultAccountType: 'caldav'
     });
 
     // Fetch calendars
-    const calendars = await account.fetchCalendars();
+    const calendars = await client.fetchCalendars();
     const homeCalendar = calendars.find(cal => 
       cal.url.includes('845FE01D-0989-4958-86CD-3EBFC8AA1791')
     );
@@ -38,9 +41,9 @@ router.get('/events', async (req, res) => {
     endDate.setDate(endDate.getDate() + 7);
 
     // Fetch events
-    const events = await account.fetchCalendarObjects({
+    const events = await client.fetchCalendarObjects({
       calendar: homeCalendar,
-      query: {
+      timeRange: {
         start: startDate.toISOString(),
         end: endDate.toISOString()
       }
