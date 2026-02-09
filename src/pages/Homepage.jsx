@@ -3,6 +3,8 @@ import { useUser } from '../context/UserContext'
 import { Card, Button, Badge } from '../components/ui'
 import { ExternalLinkIcon, CalendarIcon, ListBulletIcon } from '@radix-ui/react-icons'
 import { HomeStats, TeslaWidget, HAWeatherWidget, DeviceOverview } from '../components/HomeAssistantWidget'
+import CalendarWidget from '../components/CalendarWidget'
+import TodoWidget from '../components/TodoWidget'
 
 // Weather widget component
 function WeatherWidget() {
@@ -154,79 +156,15 @@ function ServiceLauncher() {
   )
 }
 
-// Calendar & todos component
+// Calendar & todos component using real widgets
 function CalendarTodos() {
-  // Placeholder data - will be replaced with real integrations later
-  const upcomingEvents = [
-    { time: '09:00', title: 'School Drop-off', type: 'routine' },
-    { time: '14:30', title: 'Logan Football', type: 'activity' },
-    { time: '19:00', title: 'Family Dinner', type: 'family' }
-  ]
-
-  const todos = [
-    { id: 1, text: 'Take bins out', completed: false, priority: 'high' },
-    { id: 2, text: 'Weekly shop', completed: false, priority: 'medium' },
-    { id: 3, text: 'Book dentist', completed: true, priority: 'low' }
-  ]
-
   return (
     <div className="space-y-6">
       {/* Calendar Events */}
-      <div>
-        <h2 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
-          <CalendarIcon className="w-5 h-5" />
-          Today's Events
-        </h2>
-        <div className="space-y-3">
-          {upcomingEvents.map((event, index) => (
-            <Card key={index} className="bg-slate-800/50">
-              <div className="flex items-center gap-3">
-                <div className="text-teal-400 font-mono text-sm bg-teal-500/20 px-2 py-1 rounded">
-                  {event.time}
-                </div>
-                <div>
-                  <div className="text-white text-sm">{event.title}</div>
-                  <Badge variant={
-                    event.type === 'routine' ? 'default' :
-                    event.type === 'activity' ? 'warning' : 'teal'
-                  }>
-                    {event.type}
-                  </Badge>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </div>
-
+      <CalendarWidget />
+      
       {/* Todo List Preview */}
-      <div>
-        <h2 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
-          <ListBulletIcon className="w-5 h-5" />
-          Quick Tasks
-        </h2>
-        <div className="space-y-2">
-          {todos.slice(0, 4).map((todo) => (
-            <Card key={todo.id} className="bg-slate-800/50">
-              <div className="flex items-center gap-3">
-                <div className={`w-3 h-3 rounded-full ${
-                  todo.completed ? 'bg-emerald-500' : 
-                  todo.priority === 'high' ? 'bg-red-500' :
-                  todo.priority === 'medium' ? 'bg-yellow-500' : 'bg-slate-500'
-                }`}></div>
-                <span className={`text-sm flex-1 ${
-                  todo.completed ? 'text-slate-500 line-through' : 'text-slate-300'
-                }`}>
-                  {todo.text}
-                </span>
-              </div>
-            </Card>
-          ))}
-          <Button variant="ghost" size="sm" className="w-full mt-3">
-            View All Tasks →
-          </Button>
-        </div>
-      </div>
+      <TodoWidget />
     </div>
   )
 }
