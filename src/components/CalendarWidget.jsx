@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { CalendarIcon } from '@radix-ui/react-icons';
-import { Card, Badge } from '../components/ui';
+import { Card, Badge, Button } from '../components/ui';
 
 const CalendarWidget = () => {
   const [events, setEvents] = useState([]);
@@ -141,6 +141,14 @@ const CalendarWidget = () => {
             </Card>
           ))
         )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full mt-3 text-slate-400 hover:text-white"
+          onClick={() => window.open('/family/calendar', '_blank', 'noopener,noreferrer')}
+        >
+          View Calendar →
+        </Button>
       </div>
     </div>
   );

@@ -443,6 +443,71 @@ router.get('/weather', async (req, res) => {
   }
 })
 
+// GET /api/ha/printer - OctoPrint / 3D printer status
+router.get('/printer', async (req, res) => {
+  try {
+    const printerEntities = [
+      'binary_sensor.octoprint_printing',
+      'sensor.octoprint_current_state',
+      'sensor.octoprint_job_percentage',
+      'sensor.octoprint_estimated_finish_time',
+      'sensor.octoprint_actual_printer_state'
+    ]
+
+    const results = await Promise.allSettled(
+      printerEntities.map(entityId => ha.getState(entityId))
+    )
+
+    const printer = {
+      available: false,
+      printing: false,
+      state: null,
+      job_percentage: null,
+      estimated_finish: null,
+      timestamp: new Date().toISOString()
+    }
+
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled' && result.value) {
+        const state = result.value
+        printer.available = true
+
+        switch (printerEntities[index]) {
+          case 'binary_sensor.octoprint_printing':
+            printer.printing = state.state === 'on'
+            break
+          case 'sensor.octoprint_current_state':
+            printer.state = state.state
+            break
+          case 'sensor.octoprint_job_percentage':
+            printer.job_percentage = parseFloat(state.state) || null
+            break
+          case 'sensor.octoprint_estimated_finish_time':
+            printer.estimated_finish = state.state !== 'unknown' ? state.state : null
+            break
+          case 'sensor.octoprint_actual_printer_state':
+            if (!printer.state) printer.state = state.state
+            break
+        }
+      }
+    })
+
+    res.json({
+      success: true,
+      data: printer,
+      timestamp: new Date().toISOString()
+    })
+
+  } catch (error) {
+    console.error('Printer API Error:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    })
+  }
+})
+
 // GET /api/ha/status - Overall HA connection status
 router.get('/status', async (req, res) => {
   try {

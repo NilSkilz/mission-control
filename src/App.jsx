@@ -1,5 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
 import { UserProvider, useUser } from './context/UserContext'
+import { ArrowLeftIcon } from '@radix-ui/react-icons'
 import LoginScreen from './components/LoginScreen'
 import Layout from './components/Layout'
 import Homepage from './pages/Homepage'
@@ -8,6 +9,24 @@ import MealsPage from './pages/Meals'
 import MealsManagerPage from './pages/MealsManager'
 import ShoppingPage from './pages/Shopping'
 import CalendarPage from './pages/Calendar'
+
+function BackToHome({ children }) {
+  return (
+    <div className="min-h-screen">
+      <header className="sticky top-0 z-30 bg-slate-800/80 backdrop-blur-sm border-b border-slate-700">
+        <div className="max-w-5xl mx-auto px-4 py-3">
+          <Link to="/" className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm">
+            <ArrowLeftIcon className="w-4 h-4" />
+            Back to Home
+          </Link>
+        </div>
+      </header>
+      <main className="max-w-5xl mx-auto px-4 py-6">
+        {children}
+      </main>
+    </div>
+  )
+}
 
 function ProtectedRoute({ children, requireParent = false }) {
   const { user, loading } = useUser()
@@ -51,30 +70,30 @@ function AppRoutes() {
       <Route path="/family/login" element={user ? <Navigate to="/family/chores" replace /> : <LoginScreen />} />
       <Route path="/family/chores" element={
         <ProtectedRoute>
-          <Layout>
+          <BackToHome>
             <ChoresPage />
-          </Layout>
+          </BackToHome>
         </ProtectedRoute>
       } />
       <Route path="/family/meals" element={
         <ProtectedRoute requireParent>
-          <Layout>
+          <BackToHome>
             <MealsPage />
-          </Layout>
+          </BackToHome>
         </ProtectedRoute>
       } />
       <Route path="/meals/manage" element={
         <ProtectedRoute requireParent>
-          <Layout>
+          <BackToHome>
             <MealsManagerPage />
-          </Layout>
+          </BackToHome>
         </ProtectedRoute>
       } />
       <Route path="/family/shopping" element={
         <ProtectedRoute requireParent>
-          <Layout>
+          <BackToHome>
             <ShoppingPage />
-          </Layout>
+          </BackToHome>
         </ProtectedRoute>
       } />
       <Route path="/family/calendar" element={

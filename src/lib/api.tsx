@@ -51,6 +51,11 @@ class APIClient {
     return this.request('/devices')
   }
 
+  // GET /api/ha/printer - OctoPrint / 3D printer status
+  async getPrinter() {
+    return this.request('/printer')
+  }
+
   // GET /api/ha/weather - Local weather from HA
   async getWeather() {
     return this.request('/weather')

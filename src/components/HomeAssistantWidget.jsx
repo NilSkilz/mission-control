@@ -3,136 +3,146 @@ import { Card, Button, Badge } from './ui'
 import { ActivityLogIcon, LightningBoltIcon, GlobeIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { api, useApiCall } from '../lib/api'
 
-// Home stats component with real HA data
-export function HomeStats() {
-  const { data: stats, loading: statsLoading, error: statsError, refetch: refetchStats } = useApiCall(() => api.getStats())
-  const { data: status, loading: statusLoading, error: statusError } = useApiCall(() => api.getStatus())
+// Home environment stats (temperature & power) - displayed as inline cards
+export function HomeEnvironment() {
+  const { data: stats, loading, error, refetch } = useApiCall(() => api.getStats())
 
-  // Auto-refresh every 60 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      refetchStats()
+      refetch()
     }, 60000)
-    
     return () => clearInterval(interval)
-  }, [refetchStats])
+  }, [refetch])
 
-  if (statsLoading || statusLoading) {
+  if (loading) {
     return (
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-          🏠 Home Status
-        </h2>
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="bg-slate-800/50">
-              <div className="animate-pulse flex items-center gap-3">
-                <div className="w-5 h-5 bg-slate-600 rounded"></div>
-                <div className="flex-1">
-                  <div className="w-20 h-3 bg-slate-600 rounded mb-1"></div>
-                  <div className="w-16 h-4 bg-slate-600 rounded"></div>
-                </div>
-                <div className="w-6 h-6 bg-slate-600 rounded-full"></div>
+      <>
+        {[1, 2].map((i) => (
+          <Card key={i} className="bg-slate-800/50">
+            <div className="animate-pulse flex items-center gap-3">
+              <div className="w-10 h-10 bg-slate-600 rounded-lg"></div>
+              <div>
+                <div className="w-20 h-3 bg-slate-600 rounded mb-1"></div>
+                <div className="w-16 h-5 bg-slate-600 rounded"></div>
               </div>
-            </Card>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  const homeAssistantConnected = status?.success && status?.data?.connected
-
-  // Build stats array from API data
-  const displayStats = []
-
-  // Climate data
-  if (stats?.success && stats?.data?.climate) {
-    const climate = stats.data.climate
-    displayStats.push({
-      icon: <ActivityLogIcon className="w-5 h-5" />,
-      label: climate.friendly_name || 'Living Room',
-      value: `${climate.current_temperature}°${climate.unit?.replace('°C', 'C') || 'C'}`,
-      status: 'normal',
-      color: 'text-blue-400',
-      subtitle: `Target: ${climate.temperature}°C` + (climate.hvac_action ? ` • ${climate.hvac_action}` : '')
-    })
-  }
-
-  // Power data
-  if (stats?.success && stats?.data?.power) {
-    const power = stats.data.power
-    displayStats.push({
-      icon: <LightningBoltIcon className="w-5 h-5" />,
-      label: 'Power Usage',
-      value: `${power.current_usage_kw} kW`,
-      status: 'normal',
-      color: 'text-yellow-400',
-      subtitle: `${Math.round(power.current_usage)} W`
-    })
-  }
-
-  // Home Assistant connection status
-  displayStats.push({
-    icon: <GlobeIcon className="w-5 h-5" />,
-    label: 'Home Assistant',
-    value: homeAssistantConnected ? 'Online' : 'Offline',
-    status: homeAssistantConnected ? 'good' : 'error',
-    color: homeAssistantConnected ? 'text-emerald-400' : 'text-red-400',
-    subtitle: status?.data?.version ? `v${status.data.version}` : (statusError || statsError || 'Unknown')
-  })
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-          🏠 Home Status
-        </h2>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={refetchStats}
-          className="opacity-70 hover:opacity-100"
-        >
-          <ReloadIcon className="w-4 h-4" />
-        </Button>
-      </div>
-      
-      <div className="space-y-3">
-        {displayStats.map((stat, index) => (
-          <Card key={index} className="bg-slate-800/50">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={stat.color}>{stat.icon}</div>
-                <div className="flex-1">
-                  <div className="text-slate-300 text-sm">{stat.label}</div>
-                  <div className={`font-semibold ${stat.color}`}>{stat.value}</div>
-                  {stat.subtitle && (
-                    <div className="text-xs text-slate-500">{stat.subtitle}</div>
-                  )}
-                </div>
-              </div>
-              <Badge variant={
-                stat.status === 'good' ? 'success' : 
-                stat.status === 'error' ? 'destructive' : 'default'
-              }>
-                {stat.status === 'good' ? '●' : 
-                 stat.status === 'error' ? '✕' : '○'}
-              </Badge>
             </div>
           </Card>
         ))}
-      </div>
+      </>
+    )
+  }
 
-      {/* Error display */}
-      {(statsError || statusError) && (
-        <div className="text-xs text-red-400 bg-red-900/20 border border-red-500/30 rounded p-2">
-          <div className="font-medium">Connection Issues:</div>
-          {statsError && <div>• Stats: {statsError}</div>}
-          {statusError && <div>• Status: {statusError}</div>}
-        </div>
+  if (error || !stats?.success) return null
+
+  const climate = stats.data?.climate
+  const power = stats.data?.power
+
+  if (!climate && !power) return null
+
+  return (
+    <>
+      {climate && (
+        <Card className="bg-slate-800/50 border-blue-500/20">
+          <div className="flex items-center gap-3">
+            <div className="text-blue-400 bg-blue-500/10 p-2 rounded-lg">
+              <ActivityLogIcon className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-slate-400 text-xs">{climate.friendly_name || 'Living Room'}</div>
+              <div className="text-white font-semibold text-lg">{climate.current_temperature}°C</div>
+              <div className="text-slate-500 text-xs">
+                Target: {climate.temperature}°C{climate.hvac_action ? ` · ${climate.hvac_action}` : ''}
+              </div>
+            </div>
+          </div>
+        </Card>
       )}
-    </div>
+      {power && (
+        <Card className="bg-slate-800/50 border-yellow-500/20">
+          <div className="flex items-center gap-3">
+            <div className="text-yellow-400 bg-yellow-500/10 p-2 rounded-lg">
+              <LightningBoltIcon className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-slate-400 text-xs">Power Usage</div>
+              <div className="text-white font-semibold text-lg">{power.current_usage_kw} kW</div>
+              <div className="text-slate-500 text-xs">{Math.round(power.current_usage)} W</div>
+            </div>
+          </div>
+        </Card>
+      )}
+    </>
+  )
+}
+
+// System status row: HA, 3D Printer, Jarvis
+export function SystemStatus() {
+  const { data: haStatus, loading: haLoading } = useApiCall(() => api.getStatus())
+  const { data: printer, loading: printerLoading } = useApiCall(() => api.getPrinter())
+
+  const haConnected = haStatus?.success && haStatus?.data?.connected
+  const haVersion = haStatus?.data?.version
+
+  const printerAvailable = printer?.success && printer?.data?.available
+  const printing = printer?.data?.printing
+  const printerState = printer?.data?.state
+  const progress = printer?.data?.job_percentage
+
+  function getPrinterLabel() {
+    if (printerLoading) return 'Checking...'
+    if (!printerAvailable) return 'Off'
+    if (printing) return progress != null ? `Printing · ${Math.round(progress)}%` : 'Printing'
+    return printerState || 'Idle'
+  }
+
+  function getPrinterColor() {
+    if (!printerAvailable) return { dot: 'bg-slate-500', text: 'text-slate-500' }
+    if (printing) return { dot: 'bg-green-400', text: 'text-green-400' }
+    return { dot: 'bg-emerald-400', text: 'text-white' }
+  }
+
+  const printerColor = getPrinterColor()
+
+  return (
+    <Card className="bg-slate-800/50">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        {/* HA Status */}
+        <div className="flex items-center gap-3">
+          <span className={`inline-block w-2.5 h-2.5 rounded-full ${haLoading ? 'bg-slate-500 animate-pulse' : haConnected ? 'bg-emerald-400' : 'bg-red-400'}`} />
+          <div>
+            <div className="text-xs text-slate-400">Home Assistant</div>
+            <div className={`text-sm font-medium ${haLoading ? 'text-slate-500' : haConnected ? 'text-white' : 'text-red-400'}`}>
+              {haLoading ? 'Checking...' : haConnected ? (haVersion ? `v${haVersion}` : 'Online') : 'Offline'}
+            </div>
+          </div>
+        </div>
+
+        {/* 3D Printer */}
+        <div className="flex items-center gap-3">
+          <span className={`inline-block w-2.5 h-2.5 rounded-full ${printerLoading ? 'bg-slate-500 animate-pulse' : printerColor.dot}`} />
+          <div>
+            <div className="text-xs text-slate-400">3D Printer</div>
+            <div className={`text-sm font-medium ${printerColor.text}`}>
+              {getPrinterLabel()}
+            </div>
+            {printing && progress != null && (
+              <div className="w-20 bg-slate-700 rounded-full h-1 mt-0.5">
+                <div className="bg-green-400 h-1 rounded-full transition-all" style={{ width: `${progress}%` }} />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Jarvis */}
+        <div className="flex items-center gap-3">
+          <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400" />
+          <div>
+            <div className="text-xs text-slate-400">Jarvis</div>
+            <div className="text-sm font-medium text-white">Online</div>
+          </div>
+        </div>
+      </div>
+    </Card>
   )
 }
 

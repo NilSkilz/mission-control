@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useUser } from '../context/UserContext'
-import { Card, Button, Badge } from '../components/ui'
-import { ExternalLinkIcon, CalendarIcon, ListBulletIcon } from '@radix-ui/react-icons'
-import { HomeStats, TeslaWidget, HAWeatherWidget, DeviceOverview } from '../components/HomeAssistantWidget'
+import { Card, Button } from '../components/ui'
+import { ExternalLinkIcon } from '@radix-ui/react-icons'
+import { HomeEnvironment, SystemStatus, HAWeatherWidget } from '../components/HomeAssistantWidget'
+import { useNavigate } from 'react-router-dom'
 import CalendarWidget from '../components/CalendarWidget'
 import TodoWidget from '../components/TodoWidget'
 
@@ -98,7 +99,9 @@ function EnhancedWeatherWidget() {
 
 // Service launcher component
 function ServiceLauncher() {
-  const services = [
+  const navigate = useNavigate()
+
+  const externalServices = [
     {
       name: 'Home Assistant',
       description: 'Smart Home Control',
@@ -109,7 +112,7 @@ function ServiceLauncher() {
     {
       name: 'Plex',
       description: 'Media Server',
-      url: 'https://app.plex.tv',
+      url: 'https://plex.cracky.co.uk',
       icon: '🎬',
       color: 'from-orange-500/20 to-orange-600/20 border-orange-500/30 hover:from-orange-500/30 hover:to-orange-600/30'
     },
@@ -119,29 +122,55 @@ function ServiceLauncher() {
       url: 'https://overseerr.cracky.co.uk',
       icon: '📺',
       color: 'from-purple-500/20 to-purple-600/20 border-purple-500/30 hover:from-purple-500/30 hover:to-purple-600/30'
-    },
-    {
-      name: 'Tethered',
-      description: 'Lifestyle App',
-      url: 'https://tethered.me.uk',
-      icon: '🔗',
-      color: 'from-emerald-500/20 to-emerald-600/20 border-emerald-500/30 hover:from-emerald-500/30 hover:to-emerald-600/30'
     }
   ]
 
-  const handleServiceClick = (url) => {
-    window.open(url, '_blank', 'noopener,noreferrer')
-  }
+  const appLinks = [
+    {
+      name: 'Chores',
+      description: 'Family Tasks',
+      route: '/family/chores',
+      icon: '📋',
+      color: 'from-teal-500/20 to-teal-600/20 border-teal-500/30 hover:from-teal-500/30 hover:to-teal-600/30'
+    },
+    {
+      name: 'Meal Planner',
+      description: 'Weekly Meals',
+      route: '/family/meals',
+      icon: '🍽️',
+      color: 'from-emerald-500/20 to-emerald-600/20 border-emerald-500/30 hover:from-emerald-500/30 hover:to-emerald-600/30'
+    },
+    {
+      name: 'Shopping List',
+      description: 'Family Shopping',
+      route: '/family/shopping',
+      icon: '🛒',
+      color: 'from-amber-500/20 to-amber-600/20 border-amber-500/30 hover:from-amber-500/30 hover:to-amber-600/30'
+    }
+  ]
 
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-white text-center">🚀 Mission Control</h2>
       <div className="grid grid-cols-2 gap-4">
-        {services.map((service, index) => (
+        {appLinks.map((link, index) => (
           <Card
-            key={index}
+            key={`app-${index}`}
+            className={`${link.color} cursor-pointer transition-all duration-200 transform hover:scale-105 active:scale-95`}
+            onClick={() => navigate(link.route)}
+          >
+            <div className="text-center p-4">
+              <div className="text-4xl mb-3">{link.icon}</div>
+              <div className="text-white font-semibold text-lg mb-1">{link.name}</div>
+              <div className="text-slate-300 text-sm">{link.description}</div>
+            </div>
+          </Card>
+        ))}
+        {externalServices.map((service, index) => (
+          <Card
+            key={`ext-${index}`}
             className={`${service.color} cursor-pointer transition-all duration-200 transform hover:scale-105 active:scale-95`}
-            onClick={() => handleServiceClick(service.url)}
+            onClick={() => window.open(service.url, '_blank', 'noopener,noreferrer')}
           >
             <div className="text-center p-4">
               <div className="text-4xl mb-3">{service.icon}</div>
@@ -169,55 +198,126 @@ function CalendarTodos() {
   )
 }
 
+function getGreeting() {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good afternoon'
+  return 'Good evening'
+}
+
+// Inline login pane for the homepage
+function HomepageLogin() {
+  const { users, login } = useUser()
+  const [selectedUser, setSelectedUser] = useState(null)
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleLogin = async (e) => {
+    e.preventDefault()
+    if (!selectedUser || !password) return
+    setLoading(true)
+    setError('')
+    try {
+      await login(selectedUser.username, password)
+    } catch (err) {
+      setError(err.message || 'Login failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const USER_ORDER = ['rob', 'aimee', 'dexter', 'logan']
+  const sortedUsers = [...users].sort((a, b) => {
+    const ai = USER_ORDER.indexOf(a.username?.toLowerCase())
+    const bi = USER_ORDER.indexOf(b.username?.toLowerCase())
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
+  })
+
+  if (!selectedUser) {
+    return (
+      <Card className="bg-slate-800/50">
+        <h2 className="text-lg font-semibold text-white mb-4 text-center">Who are you?</h2>
+        <div className="grid grid-cols-2 gap-3">
+          {sortedUsers.map(u => (
+            <button
+              key={u.id}
+              onClick={() => { setSelectedUser(u); setPassword(''); setError('') }}
+              className="p-4 bg-slate-700/50 border border-slate-600 rounded-lg hover:border-teal-500 transition-all text-center"
+            >
+              <span className="text-2xl block">{u.avatar}</span>
+              <span className="block mt-1 text-sm font-medium text-white">{u.display_name}</span>
+            </button>
+          ))}
+        </div>
+      </Card>
+    )
+  }
+
+  return (
+    <Card className="bg-slate-800/50">
+      <form onSubmit={handleLogin} className="space-y-3">
+        <div className="text-center">
+          <span className="text-3xl">{selectedUser.avatar}</span>
+          <p className="text-white font-medium mt-1">{selectedUser.display_name}</p>
+        </div>
+        <div>
+          <input
+            type="password"
+            placeholder="Enter password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoFocus
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-teal-500 text-sm"
+          />
+        </div>
+        {error && <p className="text-red-400 text-xs text-center">{error}</p>}
+        <div className="flex gap-2">
+          <Button type="button" variant="ghost" size="sm" onClick={() => { setSelectedUser(null); setPassword(''); setError('') }} className="flex-1">
+            Back
+          </Button>
+          <Button type="submit" size="sm" disabled={!password || loading} className="flex-1">
+            {loading ? '...' : 'Login'}
+          </Button>
+        </div>
+      </form>
+    </Card>
+  )
+}
+
 export default function Homepage() {
   const { user } = useUser()
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       {/* Welcome Header */}
-      <div className="text-center space-y-2">
+      <div className="space-y-1">
         <h1 className="text-3xl font-bold text-white">
-          Welcome back, {user?.display_name || 'Friend'}! 👋
+          {user ? `${getGreeting()}, ${user.display_name}` : 'Mission Control'}
         </h1>
-        <p className="text-slate-400">Your family dashboard is ready</p>
+        <p className="text-slate-400">
+          {user ? "Here's what's happening at home" : 'Sign in to see your dashboard'}
+        </p>
       </div>
 
-      {/* Weather Bar */}
-      <EnhancedWeatherWidget />
-
-      {/* Tesla & Device Status Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <TeslaWidget />
-        <DeviceOverview />
+      {/* Weather & Home Environment */}
+      <div className="space-y-4">
+        <EnhancedWeatherWidget />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <HomeEnvironment />
+        </div>
+        <SystemStatus />
       </div>
 
-      {/* Main Three-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Home Stats */}
-        <div className="lg:col-span-3">
-          <HomeStats />
-        </div>
+      {/* Main Two-Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left Column: Service Launcher or Login */}
+        {user ? <ServiceLauncher /> : <HomepageLogin />}
 
-        {/* Center Column: Service Launcher */}
-        <div className="lg:col-span-6">
-          <ServiceLauncher />
-        </div>
-
-        {/* Right Column: Calendar & Todos */}
-        <div className="lg:col-span-3">
-          <CalendarTodos />
-        </div>
+        {/* Right Column: Calendar & Todos (logged in only) */}
+        {user && <CalendarTodos />}
       </div>
 
-      {/* Quick Actions Footer */}
-      <Card className="bg-gradient-to-r from-teal-900/20 to-teal-700/20 border-teal-600/30">
-        <div className="flex flex-wrap gap-3 justify-center">
-          <Button variant="ghost" size="sm">📋 View Chores</Button>
-          <Button variant="ghost" size="sm">🛒 Shopping List</Button>
-          <Button variant="ghost" size="sm">🍽️ Meal Planning</Button>
-          <Button variant="ghost" size="sm">📅 Family Calendar</Button>
-        </div>
-      </Card>
     </div>
   )
 }
