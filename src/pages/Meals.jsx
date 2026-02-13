@@ -6,6 +6,7 @@ import { ChevronLeftIcon, ChevronRightIcon, Pencil1Icon, PlusIcon, MagicWandIcon
 import { MEALS, MEAL_TAGS, getMealById as getStaticMealById, getMealsByCategory as getStaticMealsByCategory, formatIngredient } from '../lib/meals-data'
 import { getMeals, setMeal, addShoppingItem, getMealRecipes } from '../lib/data'
 import { suggestMealsForWeek } from '../lib/meal-suggestions'
+import { api } from '../lib/api'
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'dinner']
 const MEAL_ICONS = { breakfast: '🌅', lunch: '☀️', dinner: '🌙' }
@@ -37,6 +38,28 @@ function formatDayNum(date) {
   return date.getDate()
 }
 
+// Presence indicator component
+function PresenceIndicator({ presence }) {
+  if (!presence) return null
+  
+  const allHome = presence.headcount === 4
+  if (allHome) return null // Don't show when everyone's home
+  
+  const away = []
+  if (!presence.rob) away.push('👨')
+  if (!presence.aimee) away.push('👩')
+  if (!presence.dexter) away.push('👦D')
+  if (!presence.logan) away.push('👦L')
+  
+  return (
+    <div className="text-xs mt-1">
+      <span className="text-amber-400" title={presence.notes?.join('\n') || 'Someone away'}>
+        🏠 {presence.headcount} • <span className="opacity-60">away: {away.join(' ')}</span>
+      </span>
+    </div>
+  )
+}
+
 export default function MealsPage() {
   const { user } = useUser()
   const [meals, setMeals] = useState([])
@@ -48,6 +71,7 @@ export default function MealsPage() {
   const [selectedMealId, setSelectedMealId] = useState('')
   const [addingToList, setAddingToList] = useState(false)
   const [suggesting, setSuggesting] = useState(false)
+  const [presenceData, setPresenceData] = useState(null)
 
   const loadData = async () => {
     try {
@@ -72,7 +96,20 @@ export default function MealsPage() {
     setLoading(false)
   }
 
-  useEffect(() => { loadData() }, [])
+  const loadPresence = async () => {
+    try {
+      const response = await api.get('/presence')
+      setPresenceData(response)
+    } catch (e) {
+      console.error('Error loading presence:', e)
+      // Non-fatal - meal planning still works without presence
+    }
+  }
+
+  useEffect(() => { 
+    loadData()
+    loadPresence()
+  }, [])
   
   // Helper: get meal by ID (static or custom)
   const getMealById = (id) => {
@@ -158,8 +195,8 @@ export default function MealsPage() {
         existingMeals[dateStr] = meal
       })
 
-      // Get suggestions
-      const suggestions = suggestMealsForWeek(weekDates, existingMeals)
+      // Get suggestions (now presence-aware!)
+      const suggestions = suggestMealsForWeek(weekDates, existingMeals, presenceData)
 
       // Apply suggestions (only for days without existing meals)
       for (const [dateStr, suggestion] of Object.entries(suggestions)) {
@@ -180,6 +217,12 @@ export default function MealsPage() {
   const today = formatDate(new Date())
   const mealsByCategory = getMealsByCategory()
   const selectedMealData = selectedMealId ? getMealById(selectedMealId) : null
+
+  // Helper to get presence for a specific date
+  const getPresenceForDate = (date) => {
+    const dateStr = formatDate(date)
+    return presenceData?.days?.[dateStr] || null
+  }
 
   if (loading) {
     return (
@@ -232,12 +275,16 @@ export default function MealsPage() {
             <thead>
               <tr className="border-b border-slate-700">
                 <th className="p-3 text-left text-slate-400 text-sm font-medium w-24">Meal</th>
-                {weekDates.map(date => (
-                  <th key={formatDate(date)} className={`p-3 text-center text-sm font-medium min-w-[120px] ${formatDate(date) === today ? 'bg-teal-500/10 text-teal-400' : 'text-slate-400'}`}>
-                    <div>{formatDay(date)}</div>
-                    <div className="text-lg">{formatDayNum(date)}</div>
-                  </th>
-                ))}
+                {weekDates.map(date => {
+                  const presence = getPresenceForDate(date)
+                  return (
+                    <th key={formatDate(date)} className={`p-3 text-center text-sm font-medium min-w-[120px] ${formatDate(date) === today ? 'bg-teal-500/10 text-teal-400' : 'text-slate-400'}`}>
+                      <div>{formatDay(date)}</div>
+                      <div className="text-lg">{formatDayNum(date)}</div>
+                      <PresenceIndicator presence={presence} />
+                    </th>
+                  )
+                })}
               </tr>
             </thead>
             <tbody>
@@ -279,14 +326,16 @@ export default function MealsPage() {
       <div className="md:hidden space-y-4">
         {weekDates.map(date => {
           const isToday = formatDate(date) === today
+          const presence = getPresenceForDate(date)
           return (
             <Card key={formatDate(date)} className={isToday ? 'border-teal-500/50 bg-teal-500/5' : ''}>
-              <div className="flex items-center gap-2 mb-3 pb-3 border-b border-slate-700">
+              <div className="flex items-center gap-2 mb-3 pb-3 border-b border-slate-700 flex-wrap">
                 <span className={`text-lg font-bold ${isToday ? 'text-teal-400' : 'text-white'}`}>
                   {formatDay(date)}
                 </span>
                 <span className="text-slate-400">{date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-                {isToday && <span className="text-xs bg-teal-500 text-white px-2 py-0.5 rounded-full ml-auto">Today</span>}
+                {isToday && <span className="text-xs bg-teal-500 text-white px-2 py-0.5 rounded-full">Today</span>}
+                <div className="ml-auto"><PresenceIndicator presence={presence} /></div>
               </div>
               <div className="space-y-2">
                 {MEAL_TYPES.map(type => {

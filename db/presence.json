@@ -1,0 +1,205 @@
+{
+  "generated": "2026-02-13T09:44:05.259Z",
+  "rangeStart": "2026-02-13",
+  "rangeEnd": "2026-03-06",
+  "days": {
+    "2026-02-13": {
+      "rob": true,
+      "aimee": false,
+      "dexter": true,
+      "logan": true,
+      "headcount": 3,
+      "notes": [
+        "Aimee: Aimee away"
+      ]
+    },
+    "2026-02-14": {
+      "rob": true,
+      "aimee": false,
+      "dexter": true,
+      "logan": true,
+      "headcount": 3,
+      "notes": [
+        "Aimee: Aimee away"
+      ]
+    },
+    "2026-02-15": {
+      "rob": true,
+      "aimee": false,
+      "dexter": true,
+      "logan": true,
+      "headcount": 3,
+      "notes": [
+        "Aimee: Aimee away"
+      ]
+    },
+    "2026-02-16": {
+      "rob": true,
+      "aimee": true,
+      "dexter": true,
+      "logan": true,
+      "headcount": 4,
+      "notes": []
+    },
+    "2026-02-17": {
+      "rob": true,
+      "aimee": true,
+      "dexter": true,
+      "logan": true,
+      "headcount": 4,
+      "notes": []
+    },
+    "2026-02-18": {
+      "rob": true,
+      "aimee": true,
+      "dexter": true,
+      "logan": true,
+      "headcount": 4,
+      "notes": []
+    },
+    "2026-02-19": {
+      "rob": true,
+      "aimee": true,
+      "dexter": true,
+      "logan": true,
+      "headcount": 4,
+      "notes": []
+    },
+    "2026-02-20": {
+      "rob": true,
+      "aimee": true,
+      "dexter": true,
+      "logan": true,
+      "headcount": 4,
+      "notes": []
+    },
+    "2026-02-21": {
+      "rob": true,
+      "aimee": true,
+      "dexter": true,
+      "logan": true,
+      "headcount": 4,
+      "notes": []
+    },
+    "2026-02-22": {
+      "rob": true,
+      "aimee": true,
+      "dexter": true,
+      "logan": true,
+      "headcount": 4,
+      "notes": []
+    },
+    "2026-02-23": {
+      "rob": true,
+      "aimee": true,
+      "dexter": true,
+      "logan": true,
+      "headcount": 4,
+      "notes": []
+    },
+    "2026-02-24": {
+      "rob": true,
+      "aimee": true,
+      "dexter": true,
+      "logan": true,
+      "headcount": 4,
+      "notes": []
+    },
+    "2026-02-25": {
+      "rob": false,
+      "aimee": true,
+      "dexter": true,
+      "logan": true,
+      "headcount": 3,
+      "notes": [
+        "Rob: Rob in London?"
+      ]
+    },
+    "2026-02-26": {
+      "rob": true,
+      "aimee": true,
+      "dexter": true,
+      "logan": true,
+      "headcount": 4,
+      "notes": []
+    },
+    "2026-02-27": {
+      "rob": true,
+      "aimee": true,
+      "dexter": true,
+      "logan": true,
+      "headcount": 4,
+      "notes": []
+    },
+    "2026-02-28": {
+      "rob": true,
+      "aimee": true,
+      "dexter": true,
+      "logan": true,
+      "headcount": 4,
+      "notes": []
+    },
+    "2026-03-01": {
+      "rob": true,
+      "aimee": true,
+      "dexter": true,
+      "logan": true,
+      "headcount": 4,
+      "notes": []
+    },
+    "2026-03-02": {
+      "rob": true,
+      "aimee": true,
+      "dexter": true,
+      "logan": true,
+      "headcount": 4,
+      "notes": []
+    },
+    "2026-03-03": {
+      "rob": true,
+      "aimee": true,
+      "dexter": true,
+      "logan": true,
+      "headcount": 4,
+      "notes": []
+    },
+    "2026-03-04": {
+      "rob": true,
+      "aimee": true,
+      "dexter": true,
+      "logan": true,
+      "headcount": 4,
+      "notes": []
+    },
+    "2026-03-05": {
+      "rob": true,
+      "aimee": true,
+      "dexter": true,
+      "logan": true,
+      "headcount": 4,
+      "notes": []
+    },
+    "2026-03-06": {
+      "rob": true,
+      "aimee": true,
+      "dexter": true,
+      "logan": true,
+      "headcount": 4,
+      "notes": []
+    }
+  },
+  "events": [
+    {
+      "title": "Aimee away",
+      "member": "aimee",
+      "start": "2026-02-13",
+      "end": "2026-02-16"
+    },
+    {
+      "title": "Rob in London?",
+      "member": "rob",
+      "start": "2026-02-25",
+      "end": "2026-02-26"
+    }
+  ]
+}

@@ -8,6 +8,41 @@ const API_BASE = `${import.meta.env.VITE_API_URL || ''}/api/ha`
 class APIClient {
   constructor() {
     this.baseURL = API_BASE
+    this.apiRoot = `${import.meta.env.VITE_API_URL || ''}/api`
+  }
+
+  // Generic GET to any /api/* endpoint
+  async get(endpoint) {
+    const url = `${this.apiRoot}${endpoint}`
+    try {
+      const response = await fetch(url)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      return response.json()
+    } catch (error) {
+      console.error(`API Error (${endpoint}):`, error)
+      throw error
+    }
+  }
+
+  // Generic POST to any /api/* endpoint
+  async post(endpoint, body = {}) {
+    const url = `${this.apiRoot}${endpoint}`
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      return response.json()
+    } catch (error) {
+      console.error(`API Error (${endpoint}):`, error)
+      throw error
+    }
   }
 
   async request(endpoint, options = {}) {

@@ -1,7 +1,16 @@
 // Smart meal suggestion logic
 // Uses the existing meal database to suggest a week of dinners
+// Now with presence-aware suggestions!
 
 import { MEALS } from './meals-data'
+
+// Serving size thresholds for different headcounts
+const SERVING_PREFERENCES = {
+  4: { min: 4, ideal: 4, tags: [] }, // Full family
+  3: { min: 3, ideal: 4, tags: ['quick'] }, // One person away - slightly easier
+  2: { min: 2, ideal: 2, tags: ['quick', 'date-night'] }, // Just parents or just kids
+  1: { min: 1, ideal: 2, tags: ['quick', 'freezer'] }, // Solo meal
+}
 
 // Day-specific preferences
 const DAY_PREFERENCES = {
@@ -48,7 +57,8 @@ function shuffle(array) {
 }
 
 // Score a meal for a specific day
-function scoreMeal(meal, dayOfWeek, usedMealIds) {
+// Now accepts presence info to adjust for headcount
+function scoreMeal(meal, dayOfWeek, usedMealIds, presence = null) {
   const prefs = DAY_PREFERENCES[dayOfWeek] || {}
   let score = 0
 
@@ -83,6 +93,51 @@ function scoreMeal(meal, dayOfWeek, usedMealIds) {
     score += matchingTags.length * 10
   }
 
+  // === PRESENCE-BASED ADJUSTMENTS ===
+  if (presence) {
+    const headcount = presence.headcount || 4
+    const servingPrefs = SERVING_PREFERENCES[headcount] || SERVING_PREFERENCES[4]
+    
+    // Parse serves (could be "4" or "4-6")
+    const servesStr = String(meal.serves || '4')
+    const servesMatch = servesStr.match(/(\d+)/)
+    const serves = servesMatch ? parseInt(servesMatch[1]) : 4
+
+    // Bonus for meals that match the headcount
+    if (serves === headcount) {
+      score += 15 // Perfect match
+    } else if (serves >= servingPrefs.min && serves <= servingPrefs.ideal + 1) {
+      score += 8 // Good enough
+    } else if (serves > headcount + 2) {
+      score -= 10 // Too much food for small group
+    }
+
+    // Bonus for preferred tags based on headcount
+    if (servingPrefs.tags.length > 0) {
+      const matchingHeadcountTags = meal.tags.filter(t => servingPrefs.tags.includes(t))
+      score += matchingHeadcountTags.length * 8
+    }
+
+    // Special case: no kids home = suggest "nice-meal" or "date-night"
+    if (!presence.dexter && !presence.logan && presence.rob && presence.aimee) {
+      if (meal.tags.includes('nice-meal') || meal.tags.includes('date-night')) {
+        score += 20 // Date night bonus!
+      }
+    }
+
+    // Special case: just kids = prefer kid-approved
+    if (!presence.rob && !presence.aimee && (presence.dexter || presence.logan)) {
+      if (meal.tags.includes('kid-approved') || meal.tags.includes('freezer')) {
+        score += 15
+      }
+    }
+
+    // Avoid big roasts when fewer than 3 people
+    if (headcount < 3 && meal.category === 'Roasts & Big Meals') {
+      score -= 30
+    }
+  }
+
   // Slight bonus for family favourites (always nice)
   if (meal.tags.includes('family-favourite')) {
     score += 5
@@ -100,11 +155,11 @@ function scoreMeal(meal, dayOfWeek, usedMealIds) {
 }
 
 // Get the best meal for a specific day
-function selectMealForDay(dayOfWeek, usedMealIds, availableMeals) {
+function selectMealForDay(dayOfWeek, usedMealIds, availableMeals, presence = null) {
   // Score all meals
   const scoredMeals = availableMeals.map(meal => ({
     meal,
-    score: scoreMeal(meal, dayOfWeek, usedMealIds),
+    score: scoreMeal(meal, dayOfWeek, usedMealIds, presence),
   }))
 
   // Sort by score (highest first)
@@ -119,9 +174,10 @@ function selectMealForDay(dayOfWeek, usedMealIds, availableMeals) {
  * Generate meal suggestions for a week
  * @param {Date[]} weekDates - Array of 7 dates (Mon-Sun)
  * @param {Object} existingMeals - Map of date string -> existing meal info (to avoid suggesting what's already planned)
- * @returns {Object} Map of date string -> { mealId, mealName }
+ * @param {Object} presenceData - Optional presence data with { days: { 'YYYY-MM-DD': { rob, aimee, dexter, logan, headcount } } }
+ * @returns {Object} Map of date string -> { mealId, mealName, presence }
  */
-export function suggestMealsForWeek(weekDates, existingMeals = {}) {
+export function suggestMealsForWeek(weekDates, existingMeals = {}, presenceData = null) {
   const suggestions = {}
   const usedMealIds = new Set()
 
@@ -155,13 +211,17 @@ export function suggestMealsForWeek(weekDates, existingMeals = {}) {
       return
     }
 
-    const selectedMeal = selectMealForDay(dayOfWeek, usedMealIds, shuffledMeals)
+    // Get presence for this day
+    const dayPresence = presenceData?.days?.[dateStr] || null
+
+    const selectedMeal = selectMealForDay(dayOfWeek, usedMealIds, shuffledMeals, dayPresence)
     
     if (selectedMeal) {
       usedMealIds.add(selectedMeal.id)
       suggestions[dateStr] = {
         mealId: selectedMeal.id,
         mealName: selectedMeal.name,
+        presence: dayPresence, // Include presence info for UI
       }
     } else {
       suggestions[dateStr] = null
