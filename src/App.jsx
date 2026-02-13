@@ -9,6 +9,7 @@ import MealsPage from './pages/Meals'
 import MealsManagerPage from './pages/MealsManager'
 import ShoppingPage from './pages/Shopping'
 import CalendarPage from './pages/Calendar'
+import DocumentsPage from './pages/Documents'
 
 function BackToHome({ children }) {
   return (
@@ -102,6 +103,12 @@ function AppRoutes() {
             <CalendarPage />
           </Layout>
         </ProtectedRoute>
+      } />
+
+      <Route path="/documents" element={
+        <Layout>
+          <DocumentsPage />
+        </Layout>
       } />
       
       {/* Legacy redirects */}

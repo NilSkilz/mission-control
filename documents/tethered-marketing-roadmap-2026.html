@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tethered Marketing Roadmap 2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header .subtitle {
+            font-size: 1.3em;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .header .dates {
+            font-size: 1.1em;
+            opacity: 0.8;
+        }
+
+        .legend {
+            background: #f8f9fa;
+            padding: 30px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .legend h3 {
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            color: #2d3748;
+        }
+
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        .phase-1 { background: #ff6b6b; }
+        .phase-2 { background: #4ecdc4; }
+        .phase-3 { background: #45b7d1; }
+        .release { background: #96ceb4; }
+        .blog { background: #fcea2b; }
+        .milestone { background: #ff9ff3; }
+
+        .timeline-container {
+            padding: 40px;
+            background: white;
+        }
+
+        .phase-section {
+            margin-bottom: 60px;
+        }
+
+        .phase-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            border-radius: 15px;
+            color: white;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+
+        .phase-1-header { background: linear-gradient(135deg, #ff6b6b, #ee5a52); }
+        .phase-2-header { background: linear-gradient(135deg, #4ecdc4, #44a08d); }
+        .phase-3-header { background: linear-gradient(135deg, #45b7d1, #3a9bc1); }
+
+        .month-grid {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .month-label {
+            background: #2d3748;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 1.2em;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .month-events {
+            display: grid;
+            gap: 15px;
+        }
+
+        .event-week {
+            border-left: 4px solid #e9ecef;
+            padding-left: 20px;
+        }
+
+        .week-label {
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+
+        .event-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .event-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+
+        .event-icon {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .event-content {
+            flex: 1;
+        }
+
+        .event-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 1em;
+        }
+
+        .event-description {
+            font-size: 0.9em;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .event-date {
+            font-size: 0.8em;
+            color: #999;
+            font-weight: 500;
+        }
+
+        .stats-section {
+            background: #f8f9fa;
+            padding: 40px;
+            margin-top: 40px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 3em;
+            font-weight: 700;
+            color: #4ecdc4;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .milestone-card {
+            background: linear-gradient(135deg, #ff9ff3, #f368e0);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .milestone-title {
+            font-weight: 700;
+            font-size: 1.3em;
+            margin-bottom: 10px;
+        }
+
+        .milestone-description {
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            .month-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .timeline-container {
+                padding: 20px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .cta-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: white;
+            color: #667eea;
+            padding: 15px 30px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 20px;
+            transition: transform 0.2s ease;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔗 Tethered Marketing Roadmap</h1>
+            <div class="subtitle">From Safety App to Community Platform</div>
+            <div class="dates">February - July 2026</div>
+        </div>
+
+        <div class="legend">
+            <h3>🗺️ Roadmap Legend</h3>
+            <div class="legend-grid">
+                <div class="legend-item">
+                    <div class="legend-color phase-1"></div>
+                    <span>Phase 1: Foundation</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color phase-2"></div>
+                    <span>Phase 2: Growth</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color phase-3"></div>
+                    <span>Phase 3: Scale</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color release"></div>
+                    <span>🚀 Feature Release</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color blog"></div>
+                    <span>📝 Blog Post</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color milestone"></div>
+                    <span>🎯 Milestone</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="timeline-container">
+            <!-- PHASE 1: FOUNDATION -->
+            <div class="phase-section">
+                <div class="phase-header phase-1-header">
+                    🔨 PHASE 1: FOUNDATION (February - March)
+                    <div style="font-size: 0.7em; margin-top: 10px; opacity: 0.9;">
+                        Polish core features • Improve onboarding • Establish content rhythm
+                    </div>
+                </div>
+
+                <!-- February -->
+                <div class="month-grid">
+                    <div class="month-label">
+                        <div>FEBRUARY</div>
+                        <div style="font-size: 0.8em; margin-top: 5px; opacity: 0.8;">Onboarding & Safety</div>
+                    </div>
+                    <div class="month-events">
+                        <div class="event-week">
+                            <div class="week-label">Week 1 (Feb 3-9)</div>
+                            <div class="event-item">
+                                <div class="event-icon blog"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Why Every Kinkster Needs a Safety Timer</div>
+                                    <div class="event-description">Launch content strategy with timer best practices</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="event-week">
+                            <div class="week-label">Week 2 (Feb 10-16)</div>
+                            <div class="event-item">
+                                <div class="event-icon release"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Release 1.1: Onboarding Excellence</div>
+                                    <div class="event-description">Interactive tutorial, consent checklist UX, profile wizard</div>
+                                </div>
+                            </div>
+                            <div class="event-item">
+                                <div class="event-icon blog"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Solo Play Safety Guide</div>
+                                    <div class="event-description">Comprehensive safety protocols from existing draft</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="event-week">
+                            <div class="week-label">Week 3 (Feb 17-23)</div>
+                            <div class="event-item">
+                                <div class="event-icon blog"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Meeting New Partners Safely</div>
+                                    <div class="event-description">Vetting process and red flags guide</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="event-week">
+                            <div class="week-label">Week 4 (Feb 24-Mar 2)</div>
+                            <div class="event-item">
+                                <div class="event-icon release"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Release 1.2: Safety Timer Enhancements</div>
+                                    <div class="event-description">Custom presets, emergency contacts, session logging</div>
+                                </div>
+                            </div>
+                            <div class="event-item">
+                                <div class="event-icon blog"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Emergency Protocols</div>
+                                    <div class="event-description">Crisis management and when to seek help</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- March -->
+                <div class="month-grid">
+                    <div class="month-label">
+                        <div>MARCH</div>
+                        <div style="font-size: 0.8em; margin-top: 5px; opacity: 0.8;">Communication & Education</div>
+                    </div>
+                    <div class="month-events">
+                        <div class="event-week">
+                            <div class="week-label">Week 5-6 (Mar 3-16)</div>
+                            <div class="event-item">
+                                <div class="event-icon release"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Release 1.3: Partner Communication</div>
+                                    <div class="event-description">Enhanced linking, shared preferences, messaging system</div>
+                                </div>
+                            </div>
+                            <div class="event-item">
+                                <div class="event-icon blog"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Negotiating Consent & Partner Support</div>
+                                    <div class="event-description">2 posts on communication and vanilla partner support</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="event-week">
+                            <div class="week-label">Week 7-8 (Mar 17-30)</div>
+                            <div class="event-item">
+                                <div class="event-icon release"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Release 1.4: Content & Education</div>
+                                    <div class="event-description">In-app safety guides, glossary, quick reference cards</div>
+                                </div>
+                            </div>
+                            <div class="event-item">
+                                <div class="event-icon blog"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Budget Kink & Non-Verbal Cues</div>
+                                    <div class="event-description">Accessibility focus and advanced communication</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="milestone-card">
+                    <div class="milestone-title">🎯 Phase 1 Milestone</div>
+                    <div class="milestone-description">50+ users, 70% retention, core features polished, content strategy established</div>
+                </div>
+            </div>
+
+            <!-- PHASE 2: GROWTH -->
+            <div class="phase-section">
+                <div class="phase-header phase-2-header">
+                    📈 PHASE 2: GROWTH (April - May)
+                    <div style="font-size: 0.7em; margin-top: 10px; opacity: 0.9;">
+                        Advanced features • Monetization • Community building
+                    </div>
+                </div>
+
+                <!-- April -->
+                <div class="month-grid">
+                    <div class="month-label">
+                        <div>APRIL</div>
+                        <div style="font-size: 0.8em; margin-top: 5px; opacity: 0.8;">Premium Launch</div>
+                    </div>
+                    <div class="month-events">
+                        <div class="event-week">
+                            <div class="week-label">Week 9-10 (Mar 31-Apr 13)</div>
+                            <div class="event-item">
+                                <div class="event-icon release"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Release 2.1: Task System Overhaul</div>
+                                    <div class="event-description">Categories, progress tracking, achievements</div>
+                                </div>
+                            </div>
+                            <div class="event-item">
+                                <div class="event-icon blog"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Skill Building & Psychology</div>
+                                    <div class="event-description">Progression guides and mental health aspects</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="event-week">
+                            <div class="week-label">Week 11-12 (Apr 14-27)</div>
+                            <div class="event-item">
+                                <div class="event-icon release"></div>
+                                <div class="event-content">
+                                    <div class="event-title">🚀 Release 2.2: PREMIUM LAUNCH</div>
+                                    <div class="event-description">Subscription tiers, advanced features, priority support</div>
+                                </div>
+                            </div>
+                            <div class="event-item">
+                                <div class="event-icon blog"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Company Values & Science</div>
+                                    <div class="event-description">Transparent business model and myth-busting content</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- May -->
+                <div class="month-grid">
+                    <div class="month-label">
+                        <div>MAY</div>
+                        <div style="font-size: 0.8em; margin-top: 5px; opacity: 0.8;">Community & Analytics</div>
+                    </div>
+                    <div class="month-events">
+                        <div class="event-week">
+                            <div class="week-label">Week 13-14 (Apr 28-May 11)</div>
+                            <div class="event-item">
+                                <div class="event-icon release"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Release 2.3: Community Features</div>
+                                    <div class="event-description">Anonymous sharing, challenges, testimonials</div>
+                                </div>
+                            </div>
+                            <div class="event-item">
+                                <div class="event-icon blog"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Advanced Rope Safety & User Spotlights</div>
+                                    <div class="event-description">Technical content and community stories</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="event-week">
+                            <div class="week-label">Week 15-16 (May 12-25)</div>
+                            <div class="event-item">
+                                <div class="event-icon release"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Release 2.4: Analytics & Insights</div>
+                                    <div class="event-description">Safety dashboard, session analytics, goal setting</div>
+                                </div>
+                            </div>
+                            <div class="event-item">
+                                <div class="event-icon blog"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Data-Driven Kink & Goal Setting</div>
+                                    <div class="event-description">Analytics insights and improvement frameworks</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="milestone-card">
+                    <div class="milestone-title">🎯 Phase 2 Milestone</div>
+                    <div class="milestone-description">200+ users, subscription model live with 15% conversion, $300+ MRR</div>
+                </div>
+            </div>
+
+            <!-- PHASE 3: SCALE -->
+            <div class="phase-section">
+                <div class="phase-header phase-3-header">
+                    🚀 PHASE 3: SCALE (June - July)
+                    <div style="font-size: 0.7em; margin-top: 10px; opacity: 0.9;">
+                        Advanced tools • Platform expansion • Ecosystem growth
+                    </div>
+                </div>
+
+                <!-- June -->
+                <div class="month-grid">
+                    <div class="month-label">
+                        <div>JUNE</div>
+                        <div style="font-size: 0.8em; margin-top: 5px; opacity: 0.8;">Advanced Tools</div>
+                    </div>
+                    <div class="month-events">
+                        <div class="event-week">
+                            <div class="week-label">Week 17-18 (May 26-Jun 8)</div>
+                            <div class="event-item">
+                                <div class="event-icon release"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Release 3.1: Scene Planning Tools</div>
+                                    <div class="event-description">Scene builder, checklists, risk assessment, aftercare</div>
+                                </div>
+                            </div>
+                            <div class="event-item">
+                                <div class="event-icon blog"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Scene Planning & Risk Assessment</div>
+                                    <div class="event-description">Structured play and smart risk-taking guides</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="event-week">
+                            <div class="week-label">Week 19-20 (Jun 9-22)</div>
+                            <div class="event-item">
+                                <div class="event-icon release"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Release 3.2: Integration & Automation</div>
+                                    <div class="event-description">Calendar sync, health monitoring, smart notifications</div>
+                                </div>
+                            </div>
+                            <div class="event-item">
+                                <div class="event-icon blog"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Tech Integration & Aftercare Science</div>
+                                    <div class="event-description">Modern tools and neuroscience of recovery</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- July -->
+                <div class="month-grid">
+                    <div class="month-label">
+                        <div>JULY</div>
+                        <div style="font-size: 0.8em; margin-top: 5px; opacity: 0.8;">Ecosystem & Future</div>
+                    </div>
+                    <div class="month-events">
+                        <div class="event-week">
+                            <div class="week-label">Week 21-22 (Jun 23-Jul 6)</div>
+                            <div class="event-item">
+                                <div class="event-icon release"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Release 3.3: Advanced Communication</div>
+                                    <div class="event-description">Video consent, multi-partner, incident reporting, mentors</div>
+                                </div>
+                            </div>
+                            <div class="event-item">
+                                <div class="event-icon blog"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Digital Consent & Mentorship</div>
+                                    <div class="event-description">Modern safety tools and community guidance</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="event-week">
+                            <div class="week-label">Week 23-24 (Jul 7-20)</div>
+                            <div class="event-item">
+                                <div class="event-icon release"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Release 3.4: Platform Evolution</div>
+                                    <div class="event-description">Web dashboard, API foundations, white-label</div>
+                                </div>
+                            </div>
+                            <div class="event-item">
+                                <div class="event-icon blog"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Global Perspectives & Future Trends</div>
+                                    <div class="event-description">International safety and industry evolution</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="event-week">
+                            <div class="week-label">Week 25-26 (Jul 21-Aug 3)</div>
+                            <div class="event-item">
+                                <div class="event-icon release"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Release 3.5: Ecosystem Expansion</div>
+                                    <div class="event-description">Educator partnerships, event integration, professional directory</div>
+                                </div>
+                            </div>
+                            <div class="event-item">
+                                <div class="event-icon blog"></div>
+                                <div class="event-content">
+                                    <div class="event-title">Education & Milestone Celebration</div>
+                                    <div class="event-description">Mainstream bridges and 6-month retrospective</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="milestone-card">
+                    <div class="milestone-title">🎯 FINAL MILESTONE</div>
+                    <div class="milestone-description">500+ users, $1,000+ MRR, established market position, thriving community</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-section">
+            <h2 style="text-align: center; margin-bottom: 20px; color: #2d3748;">📊 Success Metrics</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">13</div>
+                    <div class="stat-label">Feature Releases</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">26</div>
+                    <div class="stat-label">Blog Posts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">500+</div>
+                    <div class="stat-label">Target Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">$1K+</div>
+                    <div class="stat-label">Monthly Revenue</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">2400%</div>
+                    <div class="stat-label">User Growth</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">80%</div>
+                    <div class="stat-label">Target Retention</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="cta-section">
+            <h2>Ready to Transform Kink Safety? 🚀</h2>
+            <p style="font-size: 1.1em; margin: 20px 0; opacity: 0.9;">
+                This roadmap turns vision into executable action. Every feature, every blog post, every milestone designed to make kink safer for everyone.
+            </p>
+            <a href="#" class="cta-button">Start Building the Future</a>
+        </div>
+    </div>
+</body>
+</html>
