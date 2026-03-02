@@ -52,6 +52,14 @@ async function setupRoutes() {
   } catch (e) {
     console.error('✗ Failed to load presence routes:', e.message);
   }
+
+  try {
+    const eventsModule = await import('./routes/events.js');
+    app.use('/api/events', eventsModule.default);
+    console.log('✓ Events routes loaded');
+  } catch (e) {
+    console.error('✗ Failed to load events routes:', e.message);
+  }
 }
 
 // Start server

@@ -10,6 +10,7 @@ import MealsManagerPage from './pages/MealsManager'
 import ShoppingPage from './pages/Shopping'
 import CalendarPage from './pages/Calendar'
 import DocumentsPage from './pages/Documents'
+import SeasonalDemo from './pages/SeasonalDemo'
 
 function BackToHome({ children }) {
   return (
@@ -66,6 +67,9 @@ function AppRoutes() {
     <Routes>
       {/* Public homepage - no auth required */}
       <Route path="/" element={<Homepage />} />
+      
+      {/* Seasonal awareness demo - public route for showcase */}
+      <Route path="/seasonal-demo" element={<SeasonalDemo />} />
       
       {/* Family app routes - auth required */}
       <Route path="/family/login" element={user ? <Navigate to="/family/chores" replace /> : <LoginScreen />} />

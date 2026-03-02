@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ambient Theme Test - Mission Control</title>
+    <style>
+        /* Import CSS custom properties system */
+        :root {
+            --ambience-primary: rgba(34, 211, 238, 0.7);
+            --ambience-secondary: rgba(56, 189, 248, 0.5);
+            --ambience-accent: rgba(20, 184, 166, 0.6);
+            --ambience-glow: rgba(34, 211, 238, 0.3);
+            --ambience-background: linear-gradient(to bottom right, #0f172a, #1e1e2e, #1e40af);
+            --ambience-transition: 2s ease-in-out;
+        }
+        
+        body {
+            font-family: 'Monaco', 'Menlo', monospace;
+            background: var(--ambience-background);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            transition: background var(--ambience-transition);
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            color: var(--ambience-primary);
+            text-shadow: 0 0 8px var(--ambience-glow);
+            text-align: center;
+            margin-bottom: 30px;
+            transition: color var(--ambience-transition), text-shadow var(--ambience-transition);
+        }
+        
+        .theme-card {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--ambience-secondary);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            transition: border-color var(--ambience-transition);
+        }
+        
+        .theme-preview {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 10px 0;
+        }
+        
+        .color-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .current-time {
+            color: var(--ambience-accent);
+            font-size: 24px;
+            text-align: center;
+            margin: 20px 0;
+            transition: color var(--ambience-transition);
+        }
+        
+        .theme-info {
+            color: var(--ambience-secondary);
+            transition: color var(--ambience-transition);
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .time-button {
+            background: transparent;
+            border: 1px solid var(--ambience-primary);
+            color: var(--ambience-primary);
+            padding: 8px 16px;
+            margin: 5px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all var(--ambience-transition);
+        }
+        
+        .time-button:hover {
+            background: var(--ambience-primary);
+            color: black;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="header">// MISSION_CONTROL_AMBIENT_THEMES</h1>
+        
+        <div class="current-time" id="currentTime"></div>
+        
+        <div class="theme-card">
+            <h3 style="color: var(--ambience-primary); margin-top: 0;">Current Theme Status</h3>
+            <div id="themeStatus">
+                <div class="theme-info">Calculating theme...</div>
+            </div>
+        </div>
+        
+        <div class="theme-card">
+            <h3 style="color: var(--ambience-primary); margin-top: 0;">Available Themes</h3>
+            <div id="themesList"></div>
+        </div>
+        
+        <div class="controls">
+            <h4 style="color: var(--ambience-secondary);">Test Different Times:</h4>
+            <button class="time-button" onclick="testTheme('early-morning', '06:00')">Early Morning (6AM)</button>
+            <button class="time-button" onclick="testTheme('morning', '09:00')">Morning (9AM)</button>
+            <button class="time-button" onclick="testTheme('day', '14:00')">Day (2PM)</button>
+            <button class="time-button" onclick="testTheme('evening', '19:00')">Evening (7PM)</button>
+            <button class="time-button" onclick="testTheme('night', '22:00')">Night (10PM)</button>
+            <button class="time-button" onclick="testTheme('late-night', '02:00')">Late Night (2AM)</button>
+            <button class="time-button" onclick="resetToCurrentTime()">Reset to Current</button>
+        </div>
+    </div>
+
+    <script>
+        // Theme configurations (matching the React implementation)
+        const THEME_CONFIG = {
+            'early-morning': {
+                primary: 'rgba(59, 130, 246, 0.7)',
+                secondary: 'rgba(147, 197, 253, 0.5)',
+                accent: 'rgba(34, 211, 238, 0.6)',
+                glow: 'rgba(56, 189, 248, 0.3)',
+                background: 'linear-gradient(to bottom right, #0c0a1e, #1e3a8a, #0f172a)',
+                description: 'Cool morning awakening - soft blues and calm tones',
+                time: '5:00-7:00 AM',
+                mood: '🌅 Awakening'
+            },
+            'morning': {
+                primary: 'rgba(34, 211, 238, 0.7)',
+                secondary: 'rgba(125, 211, 252, 0.5)',
+                accent: 'rgba(59, 130, 246, 0.6)',
+                glow: 'rgba(34, 211, 238, 0.4)',
+                background: 'linear-gradient(to bottom right, #0f172a, #164e63, #1e40af)',
+                description: 'Fresh morning energy - bright cyans and sky blues',
+                time: '7:00-10:00 AM',
+                mood: '☀️ Energetic'
+            },
+            'day': {
+                primary: 'rgba(34, 211, 238, 0.7)',
+                secondary: 'rgba(56, 189, 248, 0.5)',
+                accent: 'rgba(20, 184, 166, 0.6)',
+                glow: 'rgba(34, 211, 238, 0.3)',
+                background: 'linear-gradient(to bottom right, #0f172a, #1e1e2e, #1e40af)',
+                description: 'Operational focus - neutral blues and teals (default)',
+                time: '10:00 AM-5:00 PM',
+                mood: '💼 Focused'
+            },
+            'evening': {
+                primary: 'rgba(251, 191, 36, 0.7)',
+                secondary: 'rgba(252, 211, 77, 0.5)',
+                accent: 'rgba(245, 158, 11, 0.6)',
+                glow: 'rgba(251, 191, 36, 0.4)',
+                background: 'linear-gradient(to bottom right, #0f172a, #451a03, #92400e)',
+                description: 'Evening warmth - amber and orange tones',
+                time: '5:00-9:00 PM',
+                mood: '🌆 Productive'
+            },
+            'night': {
+                primary: 'rgba(168, 85, 247, 0.7)',
+                secondary: 'rgba(196, 181, 253, 0.5)',
+                accent: 'rgba(239, 68, 68, 0.6)',
+                glow: 'rgba(168, 85, 247, 0.3)',
+                background: 'linear-gradient(to bottom right, #0c0a1e, #581c87, #7f1d1d)',
+                description: 'Night rest mode - deep purples and reds',
+                time: '9:00 PM-12:00 AM',
+                mood: '🌙 Calm'
+            },
+            'late-night': {
+                primary: 'rgba(107, 114, 128, 0.6)',
+                secondary: 'rgba(156, 163, 175, 0.4)',
+                accent: 'rgba(75, 85, 99, 0.5)',
+                glow: 'rgba(107, 114, 128, 0.2)',
+                background: 'linear-gradient(to bottom right, #0c0a1e, #1f2937, #111827)',
+                description: 'Minimal night mode - muted grays for sleep comfort',
+                time: '12:00-5:00 AM',
+                mood: '😴 Minimal'
+            }
+        }
+
+        let currentTestTime = null;
+
+        function getCurrentPeriod(testTime = null) {
+            const hour = testTime ? parseInt(testTime.split(':')[0]) : new Date().getHours();
+            
+            if (hour >= 5 && hour < 7) return 'early-morning';
+            if (hour >= 7 && hour < 10) return 'morning';
+            if (hour >= 10 && hour < 17) return 'day';
+            if (hour >= 17 && hour < 21) return 'evening';
+            if (hour >= 21 && hour < 24) return 'night';
+            return 'late-night';
+        }
+
+        function applyTheme(themeName) {
+            const theme = THEME_CONFIG[themeName];
+            const root = document.documentElement;
+            
+            root.style.setProperty('--ambience-primary', theme.primary);
+            root.style.setProperty('--ambience-secondary', theme.secondary);
+            root.style.setProperty('--ambience-accent', theme.accent);
+            root.style.setProperty('--ambience-glow', theme.glow);
+            root.style.setProperty('--ambience-background', theme.background);
+        }
+
+        function updateThemeStatus() {
+            const currentTheme = getCurrentPeriod(currentTestTime);
+            const theme = THEME_CONFIG[currentTheme];
+            
+            document.getElementById('themeStatus').innerHTML = `
+                <div class="theme-preview">
+                    <div class="color-dot" style="background: ${theme.primary}"></div>
+                    <strong style="color: var(--ambience-primary);">${currentTheme.toUpperCase()}</strong>
+                    <span class="status-indicator" style="background: ${theme.primary}"></span>
+                </div>
+                <div class="theme-info">
+                    <div>${theme.time} • ${theme.mood}</div>
+                    <div style="margin-top: 8px; font-size: 14px;">${theme.description}</div>
+                </div>
+            `;
+            
+            applyTheme(currentTheme);
+        }
+
+        function updateThemesList() {
+            const list = document.getElementById('themesList');
+            list.innerHTML = Object.entries(THEME_CONFIG).map(([name, config]) => `
+                <div class="theme-preview">
+                    <div class="color-dot" style="background: ${config.primary}"></div>
+                    <div>
+                        <strong>${name.replace('-', '_').toUpperCase()}</strong>
+                        <span style="color: var(--ambience-secondary); margin-left: 10px;">${config.time}</span>
+                        <div style="font-size: 12px; color: #888; margin-top: 4px;">${config.description}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateCurrentTime() {
+            const now = currentTestTime ? 
+                `TEST TIME: ${currentTestTime} (${getCurrentPeriod(currentTestTime)} theme)` : 
+                new Date().toLocaleTimeString('en-GB', { 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    second: '2-digit' 
+                });
+            document.getElementById('currentTime').textContent = now;
+        }
+
+        function testTheme(themeName, time) {
+            currentTestTime = time;
+            updateCurrentTime();
+            updateThemeStatus();
+        }
+
+        function resetToCurrentTime() {
+            currentTestTime = null;
+            updateCurrentTime();
+            updateThemeStatus();
+        }
+
+        // Initialize
+        updateCurrentTime();
+        updateThemeStatus();
+        updateThemesList();
+
+        // Update every second
+        setInterval(() => {
+            updateCurrentTime();
+            if (!currentTestTime) {
+                updateThemeStatus();
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
