@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tethered - Brand Concepts</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --accent-red: #e63946;
+            --accent-coral: #ff6b6b;
+            --accent-warm: #f4a261;
+            --accent-teal: #2ec4b6;
+            --accent-purple: #9d4edd;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --border: #2a2a3a;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 40px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        
+        .header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--accent-coral), var(--accent-warm));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+        
+        .concepts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .concept-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        
+        .concept-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-coral);
+        }
+        
+        .concept-name {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--accent-warm);
+        }
+        
+        .concept-desc {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+        
+        .logo-display {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 150px;
+            margin-bottom: 30px;
+        }
+        
+        .logo-display svg {
+            max-width: 200px;
+            height: auto;
+        }
+        
+        .variations {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .variation {
+            text-align: center;
+        }
+        
+        .variation svg {
+            width: 60px;
+            height: 60px;
+        }
+        
+        .variation-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+        
+        .wordmark {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 2rem;
+            letter-spacing: -0.02em;
+        }
+        
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            margin: 60px 0 30px;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+        
+        .color-palette {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 60px;
+        }
+        
+        .color-swatch {
+            text-align: center;
+        }
+        
+        .swatch {
+            width: 80px;
+            height: 80px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border: 2px solid var(--border);
+        }
+        
+        .color-name {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        .color-hex {
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Tethered Brand Concepts</h1>
+        <p>Logo and identity explorations for the kink safety platform</p>
+    </div>
+
+    <div class="concepts-grid">
+        
+        <!-- Concept 1: Interlocked Loops -->
+        <div class="concept-card">
+            <div class="concept-name">1. Interlocked Loops</div>
+            <div class="concept-desc">Two loops forming a connection — represents partnership, trust, and the safety of being linked together. Clean and modern.</div>
+            <div class="logo-display">
+                <svg viewBox="0 0 200 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M60 50C60 33.4 73.4 20 90 20C100.5 20 109.7 25.4 115 33.5" stroke="#e63946" stroke-width="8" stroke-linecap="round"/>
+                    <path d="M140 50C140 66.6 126.6 80 110 80C99.5 80 90.3 74.6 85 66.5" stroke="#e63946" stroke-width="8" stroke-linecap="round"/>
+                    <path d="M85 33.5C90.3 25.4 99.5 20 110 20C126.6 20 140 33.4 140 50" stroke="#f4a261" stroke-width="8" stroke-linecap="round"/>
+                    <path d="M115 66.5C109.7 74.6 100.5 80 90 80C73.4 80 60 66.6 60 50" stroke="#f4a261" stroke-width="8" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <div class="variations">
+                <div class="variation">
+                    <svg viewBox="0 0 60 60" fill="none">
+                        <circle cx="22" cy="30" r="14" stroke="#e63946" stroke-width="4" fill="none"/>
+                        <circle cx="38" cy="30" r="14" stroke="#f4a261" stroke-width="4" fill="none"/>
+                    </svg>
+                    <div class="variation-label">Simple</div>
+                </div>
+                <div class="variation">
+                    <svg viewBox="0 0 60 60" fill="none">
+                        <circle cx="22" cy="30" r="14" stroke="#ffffff" stroke-width="4" fill="none"/>
+                        <circle cx="38" cy="30" r="14" stroke="#ffffff" stroke-width="4" fill="none"/>
+                    </svg>
+                    <div class="variation-label">Mono</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Concept 2: Safety Knot -->
+        <div class="concept-card">
+            <div class="concept-name">2. Safety Knot</div>
+            <div class="concept-desc">A stylized figure-8 / safety knot — universal symbol for secure connections in climbing and rope work. Ties directly to "Tethered" name.</div>
+            <div class="logo-display">
+                <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M60 15 C30 15 20 35 20 50 C20 65 35 75 60 75 C85 75 100 65 100 50 C100 35 90 15 60 15" stroke="#e63946" stroke-width="8" stroke-linecap="round" fill="none"/>
+                    <path d="M60 45 C30 45 20 55 20 70 C20 85 35 105 60 105 C85 105 100 85 100 70 C100 55 90 45 60 45" stroke="#f4a261" stroke-width="8" stroke-linecap="round" fill="none"/>
+                    <circle cx="60" cy="60" r="8" fill="#ffffff"/>
+                </svg>
+            </div>
+            <div class="variations">
+                <div class="variation">
+                    <svg viewBox="0 0 60 60" fill="none">
+                        <path d="M30 8 C15 8 10 18 10 25 C10 32 17 37 30 37 C43 37 50 32 50 25 C50 18 45 8 30 8" stroke="#e63946" stroke-width="3" fill="none"/>
+                        <path d="M30 23 C15 23 10 28 10 35 C10 42 17 52 30 52 C43 52 50 42 50 35 C50 28 45 23 30 23" stroke="#e63946" stroke-width="3" fill="none"/>
+                    </svg>
+                    <div class="variation-label">Solid</div>
+                </div>
+                <div class="variation">
+                    <svg viewBox="0 0 60 60" fill="none">
+                        <path d="M30 8 C15 8 10 18 10 25 C10 32 17 37 30 37 C43 37 50 32 50 25 C50 18 45 8 30 8 M30 23 C15 23 10 28 10 35 C10 42 17 52 30 52 C43 52 50 42 50 35 C50 28 45 23 30 23" stroke="#ffffff" stroke-width="3" fill="none"/>
+                    </svg>
+                    <div class="variation-label">Mono</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Concept 3: Shield + Heart -->
+        <div class="concept-card">
+            <div class="concept-name">3. Protected Heart</div>
+            <div class="concept-desc">Heart symbol within a shield outline — safety and care combined. Communicates protection without being clinical.</div>
+            <div class="logo-display">
+                <svg viewBox="0 0 120 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M60 10 L105 30 L105 70 C105 100 60 130 60 130 C60 130 15 100 15 70 L15 30 L60 10Z" stroke="#e63946" stroke-width="6" fill="none" stroke-linejoin="round"/>
+                    <path d="M60 50 C50 40 35 45 35 60 C35 75 60 90 60 90 C60 90 85 75 85 60 C85 45 70 40 60 50Z" fill="#f4a261"/>
+                </svg>
+            </div>
+            <div class="variations">
+                <div class="variation">
+                    <svg viewBox="0 0 60 70" fill="none">
+                        <path d="M30 5 L52 15 L52 35 C52 50 30 65 30 65 C30 65 8 50 8 35 L8 15 L30 5Z" stroke="#e63946" stroke-width="3" fill="none"/>
+                        <path d="M30 25 C25 20 17 23 17 30 C17 37 30 45 30 45 C30 45 43 37 43 30 C43 23 35 20 30 25Z" fill="#e63946"/>
+                    </svg>
+                    <div class="variation-label">Filled</div>
+                </div>
+                <div class="variation">
+                    <svg viewBox="0 0 60 70" fill="none">
+                        <path d="M30 5 L52 15 L52 35 C52 50 30 65 30 65 C30 65 8 50 8 35 L8 15 L30 5Z" stroke="#ffffff" stroke-width="3" fill="none"/>
+                        <path d="M30 25 C25 20 17 23 17 30 C17 37 30 45 30 45 C30 45 43 37 43 30 C43 23 35 20 30 25Z" fill="#ffffff"/>
+                    </svg>
+                    <div class="variation-label">Mono</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Concept 4: Rope T -->
+        <div class="concept-card">
+            <div class="concept-name">4. Rope T</div>
+            <div class="concept-desc">Letter T formed from rope with a subtle loop — minimal, works as app icon, clearly references the name while nodding to rope bondage.</div>
+            <div class="logo-display">
+                <svg viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 25 L80 25" stroke="#e63946" stroke-width="12" stroke-linecap="round"/>
+                    <path d="M50 25 L50 95" stroke="#e63946" stroke-width="12" stroke-linecap="round"/>
+                    <circle cx="50" cy="95" r="15" stroke="#f4a261" stroke-width="6" fill="none"/>
+                </svg>
+            </div>
+            <div class="variations">
+                <div class="variation">
+                    <svg viewBox="0 0 60 70" fill="none">
+                        <path d="M12 15 L48 15 M30 15 L30 55" stroke="#e63946" stroke-width="6" stroke-linecap="round"/>
+                        <circle cx="30" cy="55" r="8" stroke="#f4a261" stroke-width="3" fill="none"/>
+                    </svg>
+                    <div class="variation-label">Standard</div>
+                </div>
+                <div class="variation">
+                    <svg viewBox="0 0 60 70" fill="none">
+                        <path d="M12 15 L48 15 M30 15 L30 55" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
+                        <circle cx="30" cy="55" r="8" stroke="#ffffff" stroke-width="3" fill="none"/>
+                    </svg>
+                    <div class="variation-label">Mono</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Concept 5: Chain Link -->
+        <div class="concept-card">
+            <div class="concept-name">5. Secure Link</div>
+            <div class="concept-desc">Abstract chain link / carabiner shape — strength, security, connection. Industrial feel, works well with safety messaging.</div>
+            <div class="logo-display">
+                <svg viewBox="0 0 140 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="15" y="25" width="50" height="50" rx="12" stroke="#e63946" stroke-width="8" fill="none"/>
+                    <rect x="75" y="25" width="50" height="50" rx="12" stroke="#f4a261" stroke-width="8" fill="none"/>
+                    <rect x="55" y="40" width="30" height="20" fill="var(--bg-card)"/>
+                    <line x1="55" y1="42" x2="85" y2="42" stroke="#e63946" stroke-width="4"/>
+                    <line x1="55" y1="58" x2="85" y2="58" stroke="#f4a261" stroke-width="4"/>
+                </svg>
+            </div>
+            <div class="variations">
+                <div class="variation">
+                    <svg viewBox="0 0 60 40" fill="none">
+                        <rect x="5" y="8" width="22" height="24" rx="6" stroke="#e63946" stroke-width="3" fill="none"/>
+                        <rect x="33" y="8" width="22" height="24" rx="6" stroke="#f4a261" stroke-width="3" fill="none"/>
+                    </svg>
+                    <div class="variation-label">Linked</div>
+                </div>
+                <div class="variation">
+                    <svg viewBox="0 0 60 40" fill="none">
+                        <rect x="5" y="8" width="22" height="24" rx="6" stroke="#ffffff" stroke-width="3" fill="none"/>
+                        <rect x="33" y="8" width="22" height="24" rx="6" stroke="#ffffff" stroke-width="3" fill="none"/>
+                    </svg>
+                    <div class="variation-label">Mono</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Concept 6: Infinity Safety -->
+        <div class="concept-card">
+            <div class="concept-name">6. Infinite Care</div>
+            <div class="concept-desc">Infinity symbol with a subtle heart integration — endless commitment to safety and care. Elegant, works at any size.</div>
+            <div class="logo-display">
+                <svg viewBox="0 0 180 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M45 40 C45 20 65 20 90 40 C115 60 135 60 135 40 C135 20 115 20 90 40 C65 60 45 60 45 40Z" stroke="url(#grad1)" stroke-width="10" stroke-linecap="round" fill="none"/>
+                    <defs>
+                        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#e63946"/>
+                            <stop offset="100%" style="stop-color:#f4a261"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <div class="variations">
+                <div class="variation">
+                    <svg viewBox="0 0 60 30" fill="none">
+                        <path d="M15 15 C15 7 22 7 30 15 C38 23 45 23 45 15 C45 7 38 7 30 15 C22 23 15 23 15 15Z" stroke="#e63946" stroke-width="4" fill="none"/>
+                    </svg>
+                    <div class="variation-label">Solid</div>
+                </div>
+                <div class="variation">
+                    <svg viewBox="0 0 60 30" fill="none">
+                        <path d="M15 15 C15 7 22 7 30 15 C38 23 45 23 45 15 C45 7 38 7 30 15 C22 23 15 23 15 15Z" stroke="#ffffff" stroke-width="4" fill="none"/>
+                    </svg>
+                    <div class="variation-label">Mono</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <h2 class="section-title">Suggested Color Palette</h2>
+    
+    <div class="color-palette">
+        <div class="color-swatch">
+            <div class="swatch" style="background: #e63946;"></div>
+            <div class="color-name">Safety Red</div>
+            <div class="color-hex">#e63946</div>
+        </div>
+        <div class="color-swatch">
+            <div class="swatch" style="background: #f4a261;"></div>
+            <div class="color-name">Warm Coral</div>
+            <div class="color-hex">#f4a261</div>
+        </div>
+        <div class="color-swatch">
+            <div class="swatch" style="background: #2ec4b6;"></div>
+            <div class="color-name">Trust Teal</div>
+            <div class="color-hex">#2ec4b6</div>
+        </div>
+        <div class="color-swatch">
+            <div class="swatch" style="background: #1d1d2b;"></div>
+            <div class="color-name">Deep Navy</div>
+            <div class="color-hex">#1d1d2b</div>
+        </div>
+        <div class="color-swatch">
+            <div class="swatch" style="background: #ffffff;"></div>
+            <div class="color-name">Clean White</div>
+            <div class="color-hex">#ffffff</div>
+        </div>
+    </div>
+
+    <div class="concepts-grid" style="max-width: 800px;">
+        <div class="concept-card">
+            <div class="concept-name">Wordmark Options</div>
+            <div class="concept-desc">Typography treatments for the Tethered name</div>
+            <div style="display: flex; flex-direction: column; gap: 30px; align-items: center; padding: 20px 0;">
+                <div class="wordmark" style="color: #e63946;">tethered</div>
+                <div class="wordmark" style="color: #ffffff; letter-spacing: 0.1em; text-transform: uppercase; font-size: 1.6rem;">TETHERED</div>
+                <div class="wordmark" style="background: linear-gradient(135deg, #e63946, #f4a261); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">tethered</div>
+                <div class="wordmark" style="color: #ffffff; font-weight: 300;">tethered<span style="color: #e63946; font-weight: 700;">.</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 60px; padding: 40px; color: var(--text-secondary);">
+        <p>Concepts by Jarvis • February 2026</p>
+        <p style="margin-top: 10px; font-size: 0.9rem;">Let me know which direction resonates and I can refine further!</p>
+    </div>
+
+</body>
+</html>

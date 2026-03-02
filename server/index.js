@@ -1,15 +1,38 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import { createServer } from 'http';
+import { WebSocketServer } from 'ws';
+import { getHAWebSocketManager } from './websocket/haWebSocket.js';
 
 dotenv.config();
 
 const app = express();
+const server = createServer(app);
 const PORT = process.env.PORT || 3001;
+
+// WebSocket server for frontend clients
+const wss = new WebSocketServer({ server, path: '/ws' });
+const haWsManager = getHAWebSocketManager();
+
+wss.on('connection', (ws, req) => {
+  console.log(`🌐 WebSocket client connected from ${req.socket.remoteAddress}`);
+  haWsManager.addClient(ws);
+});
+
+// WebSocket status endpoint
+app.get('/api/ws/status', (req, res) => {
+  res.json(haWsManager.getStatus());
+});
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', service: 'mission-control-api' });
+});
 
 // Import and register routes with error handling
 async function setupRoutes() {
@@ -52,12 +75,46 @@ async function setupRoutes() {
   } catch (e) {
     console.error('✗ Failed to load presence routes:', e.message);
   }
+
+  try {
+    const agentsModule = await import('./routes/agents.js');
+    app.use('/api/agents', agentsModule.default);
+    console.log('✓ Agents routes loaded');
+  } catch (e) {
+    console.error('✗ Failed to load agents routes:', e.message);
+  }
+
+  try {
+    const openclawModule = await import('./routes/openclaw.js');
+    app.use('/api/openclaw', openclawModule.default);
+    console.log('✓ OpenClaw routes loaded');
+  } catch (e) {
+    console.error('✗ Failed to load openclaw routes:', e.message);
+  }
+
+  try {
+    const systemModule = await import('./routes/system.js');
+    app.use('/api/system', systemModule.systemRoutes);
+    app.use('/api/notifications', systemModule.systemRoutes);
+    console.log('✓ System routes loaded');
+  } catch (e) {
+    console.error('✗ Failed to load system routes:', e.message);
+  }
+
+  try {
+    const networkModule = await import('./routes/network.js');
+    app.use('/api/network', networkModule.networkRoutes);
+    console.log('✓ Network routes loaded');
+  } catch (e) {
+    console.error('✗ Failed to load network routes:', e.message);
+  }
 }
 
 // Start server
 setupRoutes().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  server.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📡 WebSocket available at ws://localhost:${PORT}/ws`);
   });
 });
 

@@ -3,6 +3,35 @@ import { Card, Button, Badge } from './ui'
 import { ActivityLogIcon, LightningBoltIcon, GlobeIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { api, useApiCall } from '../lib/api'
 
+// SVG Icons - blue, semi-transparent
+const TeslaIcons = {
+  car: (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: 'rgba(56, 189, 248, 0.7)' }}>
+      <path d="M5 17a2 2 0 104 0 2 2 0 00-4 0zm10 0a2 2 0 104 0 2 2 0 00-4 0z"/><path d="M3 17h2m14 0h2M5 17H3v-4l2-5h10l4 5v4h-2m-10 0h6" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  bolt: (
+    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'rgba(56, 189, 248, 0.6)' }}>
+      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  eye: (
+    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'rgba(56, 189, 248, 0.6)' }}>
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+    </svg>
+  ),
+  thermometer: (
+    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'rgba(56, 189, 248, 0.6)' }}>
+      <path d="M12 9V3m0 6a3 3 0 100 6 3 3 0 000-6zm0 6v6m-4-6a4 4 0 108 0M8 3h8" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  key: (
+    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'rgba(56, 189, 248, 0.6)' }}>
+      <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
 // Home environment stats (temperature & power) - displayed as inline cards
 export function HomeEnvironment() {
   const { data: stats, loading, error, refetch } = useApiCall(() => api.getStats())
@@ -155,7 +184,7 @@ export function TeslaWidget() {
       <Card className="bg-slate-800/50">
         <div className="animate-pulse">
           <div className="flex items-center gap-3 mb-3">
-            <div className="text-2xl">🚗</div>
+            <div>{TeslaIcons.car}</div>
             <div>
               <div className="w-16 h-4 bg-slate-600 rounded mb-1"></div>
               <div className="w-24 h-3 bg-slate-600 rounded"></div>
@@ -170,10 +199,10 @@ export function TeslaWidget() {
     return (
       <Card className="bg-slate-800/50 opacity-50">
         <div className="flex items-center gap-3">
-          <div className="text-2xl opacity-50">🚗</div>
+          <div className="opacity-50">{TeslaIcons.car}</div>
           <div>
-            <div className="text-slate-300 text-sm">Tesla "Timmy"</div>
-            <div className="text-red-400 text-xs">{error || 'Unavailable'}</div>
+            <div className="text-slate-300 text-sm font-mono">// TESLA</div>
+            <div className="text-red-400 text-xs font-mono">{error || 'Unavailable'}</div>
           </div>
         </div>
       </Card>
@@ -183,14 +212,14 @@ export function TeslaWidget() {
   const teslaData = tesla.data
 
   return (
-    <Card className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 border-slate-600/30">
+    <Card className="bg-slate-800/50 border-slate-600/30">
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="text-2xl">🚗</div>
+            <div>{TeslaIcons.car}</div>
             <div>
-              <div className="text-white font-medium">Tesla "{teslaData.vehicle_name}"</div>
-              <div className="text-xs text-slate-400">
+              <div className="text-white font-mono text-sm">// TESLA</div>
+              <div className="text-xs text-slate-400 font-mono">
                 {teslaData.available ? 'Connected' : 'Offline'}
               </div>
             </div>
@@ -201,12 +230,10 @@ export function TeslaWidget() {
         </div>
 
         {teslaData.available && (
-          <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="grid grid-cols-2 gap-2 text-xs font-mono">
             {teslaData.charging && (
               <div className="flex items-center gap-2">
-                <span className={teslaData.charging.is_charging ? 'text-green-400' : 'text-slate-400'}>
-                  ⚡
-                </span>
+                <span className={teslaData.charging.is_charging ? 'text-green-400' : ''}>{TeslaIcons.bolt}</span>
                 <span className="text-slate-300">
                   {teslaData.charging.is_charging ? 'Charging' : 'Not charging'}
                 </span>
@@ -215,18 +242,16 @@ export function TeslaWidget() {
             
             {teslaData.sentry_mode && (
               <div className="flex items-center gap-2">
-                <span className={teslaData.sentry_mode.enabled ? 'text-red-400' : 'text-slate-400'}>
-                  👁️
-                </span>
+                <span className={teslaData.sentry_mode.enabled ? 'text-red-400' : ''}>{TeslaIcons.eye}</span>
                 <span className="text-slate-300">
-                  {teslaData.sentry_mode.enabled ? 'Sentry on' : 'Sentry off'}
+                  {teslaData.sentry_mode.enabled ? 'Sentry' : 'Sentry off'}
                 </span>
               </div>
             )}
 
             {teslaData.climate && teslaData.climate.current_temperature && (
               <div className="flex items-center gap-2">
-                <span className="text-blue-400">🌡️</span>
+                {TeslaIcons.thermometer}
                 <span className="text-slate-300">
                   {teslaData.climate.current_temperature}°C
                 </span>
@@ -235,11 +260,9 @@ export function TeslaWidget() {
 
             {teslaData.valet_mode && (
               <div className="flex items-center gap-2">
-                <span className={teslaData.valet_mode.enabled ? 'text-orange-400' : 'text-slate-400'}>
-                  🔑
-                </span>
+                <span className={teslaData.valet_mode.enabled ? 'text-orange-400' : ''}>{TeslaIcons.key}</span>
                 <span className="text-slate-300">
-                  {teslaData.valet_mode.enabled ? 'Valet on' : 'Valet off'}
+                  {teslaData.valet_mode.enabled ? 'Valet' : 'Valet off'}
                 </span>
               </div>
             )}

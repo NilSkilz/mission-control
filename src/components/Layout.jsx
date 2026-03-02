@@ -9,6 +9,8 @@ const NAV_ITEMS = [
   { href: '/family/meals', key: 'meals', label: 'Meals', roles: ['parent'] },
   { href: '/family/shopping', key: 'shopping', label: 'Shopping', roles: ['parent'] },
   { href: '/family/calendar', key: 'calendar', label: 'Calendar', roles: ['parent', 'child'] },
+  { href: '/agents', key: 'agents', label: 'Agents', roles: ['parent'] },
+  { href: '/admin', key: 'admin', label: 'System Admin', roles: ['parent'] },
 ]
 
 function NavLink({ href, active, children }) {
@@ -39,6 +41,8 @@ export default function Layout({ children }) {
     if (location.pathname === '/family/meals') return 'meals'
     if (location.pathname === '/family/shopping') return 'shopping'
     if (location.pathname === '/family/calendar') return 'calendar'
+    if (location.pathname === '/agents') return 'agents'
+    if (location.pathname === '/admin') return 'admin'
     return location.pathname.split('/').pop()
   }
   const currentPage = getCurrentPage()
@@ -47,37 +51,39 @@ export default function Layout({ children }) {
   const visibleNav = NAV_ITEMS.filter(item => item.roles.includes(user.role))
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-slate-900">
       {/* Header */}
       <header className="bg-slate-800/80 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-30">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">🚀</span>
-            <h1 className="text-xl font-bold text-white hidden sm:block">Mission Control</h1>
-          </div>
-          
-          <nav className="flex gap-1">
-            {visibleNav.map(item => (
-              <NavLink key={item.key} href={item.href} active={currentPage === item.key}>
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2">
-              <UserAvatar user={user} size="sm" />
-              <span className="text-sm text-slate-300">{user.display_name}</span>
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🚀</span>
+              <h1 className="text-2xl font-bold text-white">Mission Control</h1>
             </div>
-            <Button variant="ghost" size="sm" onClick={logout}>
-              Logout
-            </Button>
+            
+            <nav className="flex gap-1">
+              {visibleNav.map(item => (
+                <NavLink key={item.key} href={item.href} active={currentPage === item.key}>
+                  {item.label}
+                </NavLink>
+              ))}
+            </nav>
+
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-2">
+                <UserAvatar user={user} size="sm" />
+                <span className="text-sm text-slate-300">{user.display_name}</span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={logout}>
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main content */}
-      <main className="max-w-5xl mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto px-6 py-6">
         {children}
       </main>
     </div>

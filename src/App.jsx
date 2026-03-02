@@ -10,6 +10,10 @@ import MealsManagerPage from './pages/MealsManager'
 import ShoppingPage from './pages/Shopping'
 import CalendarPage from './pages/Calendar'
 import DocumentsPage from './pages/Documents'
+import AgentsPage from './pages/Agents'
+import SystemAdminPage from './pages/SystemAdmin'
+import OrbitalDemo from './pages/OrbitalDemo'
+import SimpleDemo from './pages/SimpleDemo'
 
 function BackToHome({ children }) {
   return (
@@ -65,7 +69,13 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Public homepage - no auth required */}
-      <Route path="/" element={<Homepage />} />
+      <Route path="/" element={<SimpleDemo />} />
+      
+      {/* Sci-fi orbital demo - public route for showcase */}
+      <Route path="/orbital-demo" element={<OrbitalDemo />} />
+      
+      {/* Family dashboard - moved from root */}
+      <Route path="/family" element={<Homepage />} />
       
       {/* Family app routes - auth required */}
       <Route path="/family/login" element={user ? <Navigate to="/family/chores" replace /> : <LoginScreen />} />
@@ -109,6 +119,20 @@ function AppRoutes() {
         <Layout>
           <DocumentsPage />
         </Layout>
+      } />
+
+      <Route path="/agents" element={
+        <Layout>
+          <AgentsPage />
+        </Layout>
+      } />
+
+      <Route path="/admin" element={
+        <ProtectedRoute requireParent>
+          <Layout>
+            <SystemAdminPage />
+          </Layout>
+        </ProtectedRoute>
       } />
       
       {/* Legacy redirects */}

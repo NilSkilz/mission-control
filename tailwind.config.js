@@ -19,6 +19,9 @@ export default {
           800: '#115e59',
           900: '#134e4a',
         }
+      },
+      animation: {
+        'spin-slow': 'spin 60s linear infinite',
       }
     },
   },
