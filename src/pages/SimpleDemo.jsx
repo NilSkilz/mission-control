@@ -10,6 +10,7 @@ import { ActivityFeed } from '../components/ActivityFeed'
 import { JarvisStatusPanel } from '../components/JarvisStatusPanel'
 import { PredictiveCards } from '../components/PredictiveCards'
 import { ContextCards } from '../components/ContextCards'
+import { TodayTimeline } from '../components/TodayTimeline'
 import { AmbienceProvider, AmbienceStyles } from '../components/AmbienceProvider'
 import { useTimeAmbience } from '../hooks/useTimeAmbience'
 
@@ -1191,6 +1192,7 @@ function CommunicationsPanel() {
             <Link to="/family/chores" className="block text-slate-400 hover:text-cyan-400 transition-colors">./chores</Link>
             <Link to="/family/meals" className="block text-slate-400 hover:text-cyan-400 transition-colors">./meals</Link>
             <Link to="/family/shopping" className="block text-slate-400 hover:text-cyan-400 transition-colors">./shopping</Link>
+            <Link to="/timeline" className="block text-slate-400 hover:text-cyan-400 transition-colors">./timeline</Link>
           </div>
         </div>
       </Card>
@@ -1287,6 +1289,11 @@ export default function SimpleDemo() {
               compact={true}
               className="card-alive"
             />
+            {/* Today Timeline - Compact */}
+            <TodayTimeline 
+              compact={true}
+              className="card-alive"
+            />
           </div>
           
           {/* Right Panel - Communications */}
@@ -1304,11 +1311,12 @@ export default function SimpleDemo() {
         </div>
       </main>
       
-      {/* Subtle ambient effects */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-400/5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-400/5 rounded-full blur-3xl"></div>
+        {/* Subtle ambient effects */}
+        <div className="fixed inset-0 pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 ambience-subtle-glow rounded-full blur-3xl ambience-transition"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 ambience-subtle-glow rounded-full blur-3xl ambience-transition"></div>
+        </div>
       </div>
-    </div>
+    </AmbienceProvider>
   )
 }

@@ -14,6 +14,7 @@ import AgentsPage from './pages/Agents'
 import SystemAdminPage from './pages/SystemAdmin'
 import OrbitalDemo from './pages/OrbitalDemo'
 import SimpleDemo from './pages/SimpleDemo'
+import TimelinePage from './pages/Timeline'
 
 function BackToHome({ children }) {
   return (
@@ -125,6 +126,10 @@ function AppRoutes() {
         <Layout>
           <AgentsPage />
         </Layout>
+      } />
+
+      <Route path="/timeline" element={
+        <TimelinePage />
       } />
 
       <Route path="/admin" element={

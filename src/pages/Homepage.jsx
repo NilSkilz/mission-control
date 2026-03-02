@@ -10,6 +10,8 @@ import { EnergyCharts } from '../components/EnergyCharts'
 import { EnergyFlowVisualization } from '../components/EnergyFlowVisualization'
 import { EnhancedSystemStatus } from '../components/EnhancedSystemStatus'
 import { NotificationWidget } from '../components/NotificationWidget'
+import { AmbienceProvider, AmbienceStyles } from '../components/AmbienceProvider'
+import { ThemePreview } from '../components/ThemePreview'
 
 // Weather widget component
 function WeatherWidget() {
@@ -300,13 +302,13 @@ export default function Homepage() {
   const { user } = useUser()
 
   return (
-    <div className="min-h-screen bg-slate-900">
+      <div className="min-h-screen bg-slate-900">
       {!user && (
         <header className="bg-slate-800/80 backdrop-blur-sm border-b border-slate-700">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
             <div className="flex items-center gap-3">
               <span className="text-2xl">🚀</span>
-              <h1 className="text-2xl font-bold text-white">Mission Control</h1>
+              <h1 className="text-2xl font-bold ambience-primary ambience-text-glow ambience-transition">Mission Control</h1>
             </div>
           </div>
         </header>
@@ -345,6 +347,7 @@ export default function Homepage() {
             {/* Right Column: Notifications, Calendar & Todos */}
             <div className="space-y-6">
               <NotificationWidget />
+              <ThemePreview compact={true} />
               <CalendarWidget />
               <TodoWidget />
             </div>

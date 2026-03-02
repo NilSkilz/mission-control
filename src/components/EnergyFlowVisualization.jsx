@@ -125,7 +125,8 @@ export function EnergyFlowVisualization() {
       try {
         setLoading(true)
         // Get current energy data from the existing API
-        const response = await fetch('/api/ha/current-energy')
+        const apiUrl = import.meta.env.DEV ? '/api/ha/current-energy' : 'http://localhost:3010/api/ha/current-energy'
+        const response = await fetch(apiUrl)
         const result = await response.json()
         
         if (result.success) {
