@@ -14,6 +14,7 @@ import AgentsPage from './pages/Agents'
 import SystemAdminPage from './pages/SystemAdmin'
 import OrbitalDemo from './pages/OrbitalDemo'
 import SimpleDemo from './pages/SimpleDemo'
+import SeasonalDemo from './pages/SeasonalDemo'
 import TimelinePage from './pages/Timeline'
 
 function BackToHome({ children }) {
@@ -74,6 +75,9 @@ function AppRoutes() {
       
       {/* Sci-fi orbital demo - public route for showcase */}
       <Route path="/orbital-demo" element={<OrbitalDemo />} />
+      
+      {/* Seasonal awareness demo - public route for showcase */}
+      <Route path="/seasonal-demo" element={<SeasonalDemo />} />
       
       {/* Family dashboard - moved from root */}
       <Route path="/family" element={<Homepage />} />

@@ -1,6 +1,6 @@
 import express from 'express';
 import NodeCache from 'node-cache';
-import { detectEventContext } from '../../src/lib/eventDetection.js';
+import { detectEventContext } from '../lib/eventDetection.js';
 
 const router = express.Router();
 const eventCache = new NodeCache({ stdTTL: 3600 }); // 1 hour cache
