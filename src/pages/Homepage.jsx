@@ -6,6 +6,12 @@ import { HomeEnvironment, SystemStatus, HAWeatherWidget } from '../components/Ho
 import { useNavigate } from 'react-router-dom'
 import CalendarWidget from '../components/CalendarWidget'
 import TodoWidget from '../components/TodoWidget'
+import { EnergyCharts } from '../components/EnergyCharts'
+import { EnergyFlowVisualization } from '../components/EnergyFlowVisualization'
+import { EnhancedSystemStatus } from '../components/EnhancedSystemStatus'
+import { NotificationWidget } from '../components/NotificationWidget'
+import { AmbienceProvider, AmbienceStyles } from '../components/AmbienceProvider'
+import { ThemePreview } from '../components/ThemePreview'
 
 // Weather widget component
 function WeatherWidget() {
@@ -58,8 +64,8 @@ function WeatherWidget() {
 
   return (
     <Card className="bg-gradient-to-r from-blue-900/30 to-blue-700/30 border-blue-600/30">
-      <div className="flex items-center gap-4">
-        <div className="text-4xl">
+      <div className="flex items-center gap-3 sm:gap-4">
+        <div className="text-3xl sm:text-4xl">
           {current.weatherCode === '113' ? '☀️' :
            current.weatherCode === '116' ? '⛅' :
            current.weatherCode === '119' ? '☁️' :
@@ -67,17 +73,17 @@ function WeatherWidget() {
            current.weatherCode.startsWith('2') || current.weatherCode.startsWith('3') ? '🌧️' :
            '🌤️'}
         </div>
-        <div>
-          <div className="text-2xl font-bold text-white">{current.temp_C}°C</div>
-          <div className="text-blue-200 text-sm">{current.weatherDesc[0].value}</div>
+        <div className="flex-1">
+          <div className="text-xl sm:text-2xl font-bold text-white">{current.temp_C}°C</div>
+          <div className="text-blue-200 text-xs sm:text-sm">{current.weatherDesc[0].value}</div>
           <div className="text-blue-300 text-xs">
             H: {today.maxtempC}°C | L: {today.mintempC}°C
           </div>
         </div>
-        <div className="ml-auto text-right text-blue-200 text-xs">
+        <div className="text-right text-blue-200 text-xs">
           <div>💧 {current.humidity}%</div>
           <div>💨 {current.windspeedKmph} km/h</div>
-          <div>📍 Crackington Haven</div>
+          <div className="hidden sm:block">📍 Crackington Haven</div>
         </div>
       </div>
     </Card>
@@ -146,36 +152,43 @@ function ServiceLauncher() {
       route: '/family/shopping',
       icon: '🛒',
       color: 'from-amber-500/20 to-amber-600/20 border-amber-500/30 hover:from-amber-500/30 hover:to-amber-600/30'
+    },
+    {
+      name: 'Mission Control',
+      description: 'Clean Dashboard',
+      route: '/simple-demo',
+      icon: '🎛️',
+      color: 'from-cyan-500/20 to-blue-600/20 border-cyan-500/30 hover:from-cyan-500/30 hover:to-blue-600/30'
     }
   ]
 
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-white text-center">🚀 Mission Control</h2>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {appLinks.map((link, index) => (
           <Card
             key={`app-${index}`}
-            className={`${link.color} cursor-pointer transition-all duration-200 transform hover:scale-105 active:scale-95`}
+            className={`${link.color} cursor-pointer transition-all duration-200 transform hover:scale-105 active:scale-95 min-h-[120px]`}
             onClick={() => navigate(link.route)}
           >
-            <div className="text-center p-4">
-              <div className="text-4xl mb-3">{link.icon}</div>
-              <div className="text-white font-semibold text-lg mb-1">{link.name}</div>
-              <div className="text-slate-300 text-sm">{link.description}</div>
+            <div className="text-center p-4 sm:p-6">
+              <div className="text-4xl sm:text-5xl mb-3">{link.icon}</div>
+              <div className="text-white font-semibold text-lg sm:text-xl mb-1">{link.name}</div>
+              <div className="text-slate-300 text-sm sm:text-base">{link.description}</div>
             </div>
           </Card>
         ))}
         {externalServices.map((service, index) => (
           <Card
             key={`ext-${index}`}
-            className={`${service.color} cursor-pointer transition-all duration-200 transform hover:scale-105 active:scale-95`}
+            className={`${service.color} cursor-pointer transition-all duration-200 transform hover:scale-105 active:scale-95 min-h-[120px]`}
             onClick={() => window.open(service.url, '_blank', 'noopener,noreferrer')}
           >
-            <div className="text-center p-4">
-              <div className="text-4xl mb-3">{service.icon}</div>
-              <div className="text-white font-semibold text-lg mb-1">{service.name}</div>
-              <div className="text-slate-300 text-sm">{service.description}</div>
+            <div className="text-center p-4 sm:p-6">
+              <div className="text-4xl sm:text-5xl mb-3">{service.icon}</div>
+              <div className="text-white font-semibold text-lg sm:text-xl mb-1">{service.name}</div>
+              <div className="text-slate-300 text-sm sm:text-base">{service.description}</div>
               <ExternalLinkIcon className="w-4 h-4 text-slate-400 mx-auto mt-2" />
             </div>
           </Card>
@@ -289,7 +302,19 @@ export default function Homepage() {
   const { user } = useUser()
 
   return (
-    <div className="p-6 space-y-6">
+      <div className="min-h-screen bg-slate-900">
+      {!user && (
+        <header className="bg-slate-800/80 backdrop-blur-sm border-b border-slate-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🚀</span>
+              <h1 className="text-2xl font-bold ambience-primary ambience-text-glow ambience-transition">Mission Control</h1>
+            </div>
+          </div>
+        </header>
+      )}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+        <div className="space-y-6">
       {/* Welcome Header */}
       <div className="space-y-1">
         <h1 className="text-3xl font-bold text-white">
@@ -300,24 +325,46 @@ export default function Homepage() {
         </p>
       </div>
 
-      {/* Weather & Home Environment */}
+      {/* Weather & Quick Environment */}
       <div className="space-y-4">
         <EnhancedWeatherWidget />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <HomeEnvironment />
         </div>
-        <SystemStatus />
       </div>
 
-      {/* Main Two-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column: Service Launcher or Login */}
-        {user ? <ServiceLauncher /> : <HomepageLogin />}
+      {user ? (
+        <>
+          {/* Dashboard Layout for Logged in Users */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            {/* Left Column: Energy Flow, Charts & System Status */}
+            <div className="xl:col-span-2 space-y-6">
+              <EnergyFlowVisualization />
+              <EnergyCharts />
+              <EnhancedSystemStatus />
+            </div>
+            
+            {/* Right Column: Notifications, Calendar & Todos */}
+            <div className="space-y-6">
+              <NotificationWidget />
+              <ThemePreview compact={true} />
+              <CalendarWidget />
+              <TodoWidget />
+            </div>
+          </div>
 
-        {/* Right Column: Calendar & Todos (logged in only) */}
-        {user && <CalendarTodos />}
-      </div>
+          {/* Service Launcher */}
+          <ServiceLauncher />
+        </>
+      ) : (
+        /* Login Interface */
+        <div className="max-w-md mx-auto">
+          <HomepageLogin />
+        </div>
+      )}
 
+        </div>
+      </main>
     </div>
   )
 }

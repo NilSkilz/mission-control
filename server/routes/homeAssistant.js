@@ -543,4 +543,295 @@ router.get('/status', async (req, res) => {
   }
 })
 
+// GET /api/ha/states - Fetch specific entity states
+router.get('/states', async (req, res) => {
+  try {
+    const { entities } = req.query
+    
+    if (!entities) {
+      return res.status(400).json({
+        success: false,
+        error: 'entities query parameter is required (comma-separated list)'
+      })
+    }
+    
+    const entityIds = entities.split(',').map(e => e.trim()).filter(Boolean)
+    
+    // Fetch all requested entity states in parallel
+    const statePromises = entityIds.map(id => ha.getState(id).catch(() => null))
+    const states = await Promise.all(statePromises)
+    
+    // Filter out null results (entities not found)
+    const validStates = states.filter(s => s !== null)
+    
+    res.json({
+      success: true,
+      data: validStates,
+      requested: entityIds.length,
+      found: validStates.length,
+      timestamp: new Date().toISOString()
+    })
+    
+  } catch (error) {
+    console.error('States API Error:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    })
+  }
+})
+
+// GET /api/ha/history - Time-series data for charts
+router.get('/history', async (req, res) => {
+  try {
+    const { period = '1day', entities } = req.query
+    
+    // Default entities for energy graphs
+    const defaultEntities = [
+      'sensor.solis_ac_output_total_power',
+      'sensor.solis_energy_today', 
+      'sensor.solis_battery_power',
+      'sensor.solis_total_energy_charged',
+      'sensor.solis_total_energy_discharged',
+      'sensor.shellyem_34945470ed50_channel_1_power',
+      'sensor.shellyem_34945470ed50_channel_2_power',
+      'climate.living_room'
+    ]
+    
+    const targetEntities = entities ? entities.split(',') : defaultEntities
+    
+    // Calculate start time based on period
+    const now = new Date()
+    const startTime = new Date()
+    switch (period) {
+      case '1day':
+        startTime.setDate(now.getDate() - 1)
+        break
+      case '7days':
+        startTime.setDate(now.getDate() - 7)
+        break
+      case '1month':
+        startTime.setMonth(now.getMonth() - 1)
+        break
+      default:
+        startTime.setDate(now.getDate() - 1)
+    }
+    
+    const history = {}
+    const errors = []
+    
+    // Fetch history for each entity
+    for (const entityId of targetEntities) {
+      try {
+        const response = await ha.client.get(`/history/period/${startTime.toISOString()}`, {
+          params: {
+            filter_entity_id: entityId,
+            end_time: now.toISOString()
+          }
+        })
+        
+        if (response.data && response.data[0]) {
+          // Process the history data
+          history[entityId] = response.data[0].map(point => ({
+            timestamp: point.last_updated,
+            value: parseFloat(point.state) || 0,
+            unit: point.attributes?.unit_of_measurement || null,
+            friendly_name: point.attributes?.friendly_name || entityId
+          })).filter(point => !isNaN(point.value))
+        } else {
+          history[entityId] = []
+        }
+      } catch (error) {
+        errors.push(`${entityId}: ${error.message}`)
+        history[entityId] = []
+      }
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        period,
+        start_time: startTime.toISOString(),
+        end_time: now.toISOString(),
+        history,
+        entities: targetEntities,
+        errors: errors.length > 0 ? errors : null
+      },
+      timestamp: new Date().toISOString()
+    })
+    
+  } catch (error) {
+    console.error('History API Error:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    })
+  }
+})
+
+// GET /api/ha/current-energy - Current energy flow data for visualization
+router.get('/current-energy', async (req, res) => {
+  try {
+    // Define energy-related entity IDs
+    const energyEntities = {
+      solar_power: 'sensor.solis_ac_output_total_power',
+      solar_energy: 'sensor.solis_energy_today',
+      battery_power: 'sensor.solis_battery_power',
+      grid_import: 'sensor.shellyem_34945470ed50_channel_1_power',
+      grid_export: 'sensor.shellyem_34945470ed50_channel_2_power',
+      // Add more specific consumption entities if available
+      house_total: 'sensor.house_total_power',
+      kitchen: 'sensor.kitchen_power',
+      living_room: 'sensor.living_room_power',
+      upstairs: 'sensor.upstairs_power',
+      office: 'sensor.office_power'
+    }
+
+    // Fetch current states for all energy entities
+    const energyStates = await Promise.allSettled(
+      Object.entries(energyEntities).map(([key, entityId]) => 
+        ha.getState(entityId).then(state => ({ key, state })).catch(() => ({ key, state: null }))
+      )
+    )
+
+    const energy = {
+      solar: { power: null, unit: 'W' },
+      battery: { power: null, unit: 'W' },
+      grid_import: { power: null, unit: 'W' },
+      grid_export: { power: null, unit: 'W' },
+      house_consumption: { power: null, unit: 'W' },
+      areas: {
+        kitchen: { power: null, unit: 'W' },
+        living_room: { power: null, unit: 'W' },
+        upstairs: { power: null, unit: 'W' },
+        office: { power: null, unit: 'W' }
+      },
+      timestamp: new Date().toISOString()
+    }
+
+    // Process results
+    energyStates.forEach((result) => {
+      if (result.status === 'fulfilled') {
+        const { key, state } = result.value
+        const power = state ? parseFloat(state.state) || 0 : null
+
+        switch (key) {
+          case 'solar_power':
+            energy.solar.power = power
+            break
+          case 'battery_power':
+            energy.battery.power = power
+            break
+          case 'grid_import':
+            energy.grid_import.power = power
+            break
+          case 'grid_export':
+            energy.grid_export.power = power
+            break
+          case 'house_total':
+            energy.house_consumption.power = power
+            break
+          case 'kitchen':
+            if (power !== null) energy.areas.kitchen.power = power
+            break
+          case 'living_room':
+            if (power !== null) energy.areas.living_room.power = power
+            break
+          case 'upstairs':
+            if (power !== null) energy.areas.upstairs.power = power
+            break
+          case 'office':
+            if (power !== null) energy.areas.office.power = power
+            break
+        }
+      }
+    })
+
+    // Calculate house consumption if not available directly
+    if (energy.house_consumption.power === null) {
+      const areaConsumption = Object.values(energy.areas)
+        .map(area => area.power || 0)
+        .reduce((sum, power) => sum + power, 0)
+      
+      if (areaConsumption > 0) {
+        energy.house_consumption.power = areaConsumption
+      } else {
+        // Fallback calculation: solar + grid_import - grid_export - battery_charging
+        const solar = energy.solar.power || 0
+        const gridImport = energy.grid_import.power || 0
+        const gridExport = energy.grid_export.power || 0
+        const batteryPower = energy.battery.power || 0 // Negative if charging
+
+        energy.house_consumption.power = solar + gridImport - gridExport - batteryPower
+      }
+    }
+
+    // Add some mock area data if no specific sensors available
+    if (Object.values(energy.areas).every(area => area.power === null)) {
+      const totalConsumption = energy.house_consumption.power || 0
+      if (totalConsumption > 0) {
+        // Distribute consumption across areas with realistic ratios
+        energy.areas.kitchen.power = Math.round(totalConsumption * 0.15)
+        energy.areas.living_room.power = Math.round(totalConsumption * 0.25)
+        energy.areas.upstairs.power = Math.round(totalConsumption * 0.35)
+        energy.areas.office.power = Math.round(totalConsumption * 0.25)
+      }
+    }
+
+    res.json({
+      success: true,
+      data: energy,
+      timestamp: new Date().toISOString()
+    })
+
+  } catch (error) {
+    console.error('Current Energy API Error:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    })
+  }
+})
+
+// POST /api/ha/service - Call a Home Assistant service
+router.post('/service', async (req, res) => {
+  try {
+    const { domain, service, entity_id, data = {} } = req.body
+
+    if (!domain || !service) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: domain and service'
+      })
+    }
+
+    // Build service data
+    const serviceData = { ...data }
+    if (entity_id) {
+      serviceData.entity_id = entity_id
+    }
+
+    console.log(`🎬 Calling HA service: ${domain}.${service}`, serviceData)
+
+    const result = await ha.callService(domain, service, serviceData)
+
+    res.json({
+      success: true,
+      result,
+      timestamp: new Date().toISOString()
+    })
+
+  } catch (error) {
+    console.error('Service API Error:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    })
+  }
+})
+
 export { router as homeAssistantRoutes }

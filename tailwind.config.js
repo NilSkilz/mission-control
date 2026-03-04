@@ -19,6 +19,22 @@ export default {
           800: '#115e59',
           900: '#134e4a',
         }
+      },
+      animation: {
+        'spin-slow': 'spin 60s linear infinite',
+        'fadeInUp': 'fadeInUp 0.5s ease-out forwards',
+      },
+      keyframes: {
+        fadeInUp: {
+          '0%': { 
+            opacity: '0', 
+            transform: 'translateY(10px)' 
+          },
+          '100%': { 
+            opacity: '1', 
+            transform: 'translateY(0)' 
+          },
+        },
       }
     },
   },

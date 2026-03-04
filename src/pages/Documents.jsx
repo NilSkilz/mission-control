@@ -81,6 +81,13 @@ export default function Documents() {
   // Load selected file content
   const handleSelect = async (file) => {
     setSelectedFile(file);
+    
+    // For HTML files, skip content loading and use /raw endpoint directly
+    if (file.type === 'html') {
+      setContent({ type: 'html' });
+      return;
+    }
+    
     try {
       const res = await axios.get(`${API_URL}/api/documents/content`, {
         params: { path: file.path }
@@ -135,12 +142,11 @@ export default function Documents() {
           <div className="p-4 text-red-400">
             Error loading content: {content.error}
           </div>
-        ) : content?.type === 'html' ? (
+        ) : selectedFile?.type === 'html' ? (
           <iframe
-            srcDoc={content.content}
+            src={`/api/documents/raw/${selectedFile.name}`}
             className="w-full h-full border-0"
             title={selectedFile.name}
-            sandbox="allow-same-origin"
           />
         ) : content?.type === 'markdown' ? (
           <div className="p-6 prose prose-invert max-w-none overflow-y-auto h-full">

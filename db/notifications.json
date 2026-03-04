@@ -1,1 +1,22 @@
-[]
+[
+  {
+    "id": "1771264814661",
+    "title": "Test",
+    "message": "Dashboard SVG icons deployed",
+    "type": "info",
+    "source": "Jarvis",
+    "timestamp": "2026-02-16T18:00:14.661Z",
+    "read": false,
+    "dismissed": true
+  },
+  {
+    "id": "1771256876760",
+    "title": "Dashboard Updated",
+    "message": "New features deployed - mobile responsive, slower spin, message display",
+    "type": "info",
+    "source": "Jarvis",
+    "timestamp": "2026-02-16T15:47:56.760Z",
+    "read": false,
+    "dismissed": true
+  }
+]

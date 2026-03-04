@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
+import { getHAWebSocketManager } from './websocket/haWebSocket.js';
 
 dotenv.config();
 
@@ -10,26 +11,19 @@ const app = express();
 const server = createServer(app);
 const PORT = process.env.PORT || 3001;
 
-// Try to load WebSocket manager (may not exist in dev)
-let haWsManager = null;
-try {
-  const { getHAWebSocketManager } = await import('./websocket/haWebSocket.js');
-  haWsManager = getHAWebSocketManager();
-  
-  // WebSocket server for frontend clients
-  const wss = new WebSocketServer({ server, path: '/ws' });
-  wss.on('connection', (ws, req) => {
-    console.log(`🌐 WebSocket client connected from ${req.socket.remoteAddress}`);
-    haWsManager.addClient(ws);
-  });
-  
-  // WebSocket status endpoint
-  app.get('/api/ws/status', (req, res) => {
-    res.json(haWsManager.getStatus());
-  });
-} catch (e) {
-  console.log('WebSocket manager not available:', e.message);
-}
+// WebSocket server for frontend clients
+const wss = new WebSocketServer({ server, path: '/ws' });
+const haWsManager = getHAWebSocketManager();
+
+wss.on('connection', (ws, req) => {
+  console.log(`🌐 WebSocket client connected from ${req.socket.remoteAddress}`);
+  haWsManager.addClient(ws);
+});
+
+// WebSocket status endpoint
+app.get('/api/ws/status', (req, res) => {
+  res.json(haWsManager.getStatus());
+});
 
 // Middleware
 app.use(cors());
@@ -116,6 +110,14 @@ async function setupRoutes() {
   }
 
   try {
+    const eventsModule = await import('./routes/events.js');
+    app.use('/api/events', eventsModule.default);
+    console.log('✓ Events routes loaded');
+  } catch (e) {
+    console.error('✗ Failed to load events routes:', e.message);
+  }
+
+  try {
     const videosModule = await import('./routes/videos.js');
     app.use('/api/videos', videosModule.default);
     console.log('✓ Videos routes loaded');
@@ -128,9 +130,7 @@ async function setupRoutes() {
 setupRoutes().then(() => {
   server.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
-    if (haWsManager) {
-      console.log(`📡 WebSocket available at ws://localhost:${PORT}/ws`);
-    }
+    console.log(`📡 WebSocket available at ws://localhost:${PORT}/ws`);
   });
 });
 
