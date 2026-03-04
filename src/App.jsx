@@ -11,6 +11,7 @@ import ShoppingPage from './pages/Shopping'
 import CalendarPage from './pages/Calendar'
 import DocumentsPage from './pages/Documents'
 import SeasonalDemo from './pages/SeasonalDemo'
+import VideosPage from './pages/Videos'
 
 function BackToHome({ children }) {
   return (
@@ -113,6 +114,14 @@ function AppRoutes() {
         <Layout>
           <DocumentsPage />
         </Layout>
+      } />
+
+      <Route path="/videos" element={
+        <ProtectedRoute requireParent>
+          <BackToHome>
+            <VideosPage />
+          </BackToHome>
+        </ProtectedRoute>
       } />
       
       {/* Legacy redirects */}
