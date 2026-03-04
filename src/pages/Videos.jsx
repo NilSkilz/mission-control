@@ -61,10 +61,10 @@ function VideoCard({ video, onPlay, index }) {
       <div className="bg-slate-900/60 backdrop-blur-sm rounded-lg overflow-hidden border border-sky-400/20 hover:border-sky-400/50 transition-all duration-300 hover:shadow-[0_0_20px_rgba(56,189,248,0.15)]">
         {/* Thumbnail area */}
         <div className="aspect-video bg-slate-950/80 flex items-center justify-center relative overflow-hidden">
-          {video.thumbnail ? (
+          {video.thumbnailUrl ? (
             <>
               <img 
-                src={video.thumbnail} 
+                src={video.thumbnailUrl} 
                 alt={video.title} 
                 className={`w-full h-full object-cover transition-all duration-500 ${imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-105'} group-hover:scale-110`}
                 onLoad={() => setImageLoaded(true)}
