@@ -414,8 +414,9 @@ router.get('/film-requests', (req, res) => {
 });
 
 router.post('/film-requests', (req, res) => {
-  const data = pick(req.body, ['title', 'requestedBy', 'note']);
+  const data = pick(req.body, ['title', 'requestedBy', 'kind', 'note']);
   if (!data.title || !data.requestedBy) return res.status(400).json({ error: 'title and requestedBy required' });
+  data.kind = data.kind === 'tv' ? 'tv' : 'film';
   data.status = 'pending';
   try {
     res.status(201).json(create('filmRequests', data));

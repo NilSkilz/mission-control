@@ -129,6 +129,7 @@ db.exec(`
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
     requestedBy TEXT NOT NULL REFERENCES users(id),
+    kind TEXT NOT NULL DEFAULT 'film',
     status TEXT NOT NULL DEFAULT 'pending',
     note TEXT,
     createdAt TEXT NOT NULL,
@@ -183,6 +184,12 @@ if (assignedCol && assignedCol.notnull === 1) {
     COMMIT;
   `);
   db.pragma('foreign_keys = ON');
+}
+
+// Film requests can be films or TV — add kind to DBs created before it existed.
+if (db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='filmRequests'").get()
+    && !db.prepare('PRAGMA table_info(filmRequests)').all().some((c) => c.name === 'kind')) {
+  db.exec("ALTER TABLE filmRequests ADD COLUMN kind TEXT NOT NULL DEFAULT 'film'");
 }
 
 // Add passwordHash for real server-side auth (was a client-side hardcoded map).

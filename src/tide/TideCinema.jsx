@@ -30,6 +30,11 @@ function Poster({ item, width = 108 }) {
         {src && !failed && (
           <img src={src} alt={item.title} onError={() => setFailed(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         )}
+        {item.media && (
+          <span style={{ position: 'absolute', top: 6, left: 6, fontSize: 9, fontWeight: 800, letterSpacing: '0.04em', padding: '2px 6px', borderRadius: 999, background: 'rgba(10,11,15,0.72)', color: '#fff' }}>
+            {item.media === 'tv' ? '📺 TV' : '🎬 FILM'}
+          </span>
+        )}
         {!src || failed ? (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end', padding: 8, fontSize: 11, fontWeight: 700, color: '#fff', textShadow: '0 1px 6px rgba(0,0,0,0.7)' }}>{item.title}</div>
         ) : null}
@@ -51,6 +56,7 @@ export default function TideCinema() {
   const [requests, setRequests] = useState([])
   const [users, setUsers] = useState([])
   const [title, setTitle] = useState('')
+  const [kind, setKind] = useState('film')
   const [loading, setLoading] = useState(true)
 
   const reloadRequests = useCallback(async () => setRequests(await getFilmRequests()), [])
@@ -68,7 +74,7 @@ export default function TideCinema() {
   const request = async (e) => {
     e.preventDefault()
     if (!title.trim()) return
-    await addFilmRequest({ title: title.trim(), requestedBy: user.id })
+    await addFilmRequest({ title: title.trim(), requestedBy: user.id, kind })
     setTitle('')
     reloadRequests()
   }
@@ -78,6 +84,9 @@ export default function TideCinema() {
   const pending = requests.filter((r) => r.status === 'pending')
   const decided = requests.filter((r) => r.status !== 'pending')
   const tonight = onDeck[0]
+  const films = recent.filter((m) => m.media === 'film').slice(0, 12)
+  const shows = recent.filter((m) => m.media === 'tv').slice(0, 12)
+  const kindTag = (k) => (k === 'tv' ? '📺 tv' : '🎬 film')
 
   return (
     // Cinema lives in the night theme permanently — lamplight is always right here.
@@ -88,7 +97,7 @@ export default function TideCinema() {
           <div className="tide-greet" style={{ fontSize: 'clamp(24px,5vw,30px)', color: 'var(--tide-ink)' }}><span className="tide-grad">cinema</span></div>
           <a href={PLEX_LINK} target="_blank" rel="noreferrer" className="tide-pill" style={{ marginLeft: 'auto', textDecoration: 'none' }}>open plex ↗</a>
         </div>
-        <p className="tide-sub" style={{ marginTop: 6 }}>continue watching, what's new, and film requests</p>
+        <p className="tide-sub" style={{ marginTop: 6 }}>continue watching, new films &amp; tv, and requests</p>
 
         {loading ? (
           <p className="tide-sub" style={{ marginTop: 18 }}>loading…</p>
@@ -117,23 +126,43 @@ export default function TideCinema() {
               </div>
             )}
 
-            {/* recently added */}
-            <div style={{ marginTop: 24 }}>
-              <Label>recently added</Label>
-              {recent.length === 0 ? (
+            {/* recently added — films + tv */}
+            {recent.length === 0 ? (
+              <div style={{ marginTop: 24 }}>
+                <Label>recently added</Label>
                 <EmptyHint>nothing new right now (or Plex is offline).</EmptyHint>
-              ) : (
-                <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 6, marginTop: 8 }}>
-                  {recent.map((m) => <Poster key={m.ratingKey} item={m} />)}
-                </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <>
+                {films.length > 0 && (
+                  <div style={{ marginTop: 24 }}>
+                    <Label>new films</Label>
+                    <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 6, marginTop: 8 }}>
+                      {films.map((m) => <Poster key={m.ratingKey} item={m} />)}
+                    </div>
+                  </div>
+                )}
+                {shows.length > 0 && (
+                  <div style={{ marginTop: 24 }}>
+                    <Label>new tv</Label>
+                    <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 6, marginTop: 8 }}>
+                      {shows.map((m) => <Poster key={m.ratingKey} item={m} />)}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
 
-            {/* request a film */}
+            {/* request a film or show */}
             <div style={{ marginTop: 24, maxWidth: 620 }}>
-              <Label>request a film</Label>
-              <form onSubmit={request} className="tide-card" style={{ padding: 12, display: 'flex', gap: 10, marginTop: 8 }}>
-                <input className="tide-input" placeholder="what do you fancy watching?" value={title} onChange={(e) => setTitle(e.target.value)} />
+              <Label>request a film or show</Label>
+              <form onSubmit={request} className="tide-card" style={{ padding: 12, display: 'flex', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 4, background: 'var(--tide-card)', border: '1px solid var(--tide-card-border)', borderRadius: 999, padding: 3 }}>
+                  {[['film', '🎬 film'], ['tv', '📺 tv']].map(([k, lbl]) => (
+                    <button type="button" key={k} onClick={() => setKind(k)} className="tide-btn" style={{ padding: '5px 12px', fontSize: 13, background: kind === k ? 'var(--tide-grad-135)' : 'transparent', color: kind === k ? '#fff' : 'var(--tide-muted)' }}>{lbl}</button>
+                  ))}
+                </div>
+                <input className="tide-input" style={{ flex: '1 1 160px' }} placeholder={kind === 'tv' ? 'which show?' : 'which film?'} value={title} onChange={(e) => setTitle(e.target.value)} />
                 <button className="tide-btn tide-btn-primary" style={{ padding: '9px 18px' }} disabled={!title.trim()}>ask</button>
               </form>
               <p className="tide-sub" style={{ fontSize: 12, marginTop: 6 }}>
@@ -145,6 +174,7 @@ export default function TideCinema() {
                   <Label>{isParent ? 'waiting for you' : 'waiting for approval'}</Label>
                   {pending.map((r) => (
                     <div key={r.id} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '6px 0', fontSize: 14 }}>
+                      <span className="tide-sub" style={{ fontSize: 11 }}>{kindTag(r.kind)}</span>
                       <span>{r.title}</span>
                       {userById[r.requestedBy] && <span className="tide-sub" style={{ fontSize: 12 }}>· {firstName(userById[r.requestedBy]).toLowerCase()}</span>}
                       {isParent ? (
@@ -165,6 +195,7 @@ export default function TideCinema() {
                   <Label>recent requests</Label>
                   {decided.map((r) => (
                     <div key={r.id} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '6px 0', fontSize: 14, opacity: r.status === 'declined' ? 0.5 : 1 }}>
+                      <span className="tide-sub" style={{ fontSize: 11 }}>{kindTag(r.kind)}</span>
                       <span>{r.title}</span>
                       <span style={{ fontSize: 12, fontWeight: 700, color: r.status === 'approved' ? 'var(--p-logan)' : 'var(--tide-faint)' }}>
                         {r.status === 'approved' ? 'approved ✓' : 'not this time'}

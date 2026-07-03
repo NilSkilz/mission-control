@@ -116,16 +116,28 @@ router.get('/summary', async (req, res) => {
 const plexHeaders = { 'X-Plex-Token': process.env.PLEX_TOKEN, Accept: 'application/json' }
 
 function mapPlexItem(m) {
-  const isEpisode = m.type === 'episode'
+  // Title should always be the show/film name; the episode or season goes in the subtitle.
+  let title, subtitle
+  if (m.type === 'episode') {
+    title = m.grandparentTitle
+    subtitle = `S${m.parentIndex}E${m.index} · ${m.title}`
+  } else if (m.type === 'season') {
+    title = m.parentTitle || m.title  // the show name
+    subtitle = m.title                 // e.g. "Season 2"
+  } else {
+    title = m.title
+    subtitle = m.year ? String(m.year) : ''
+  }
   return {
     ratingKey: m.ratingKey,
     type: m.type,
-    title: isEpisode ? m.grandparentTitle : m.title,
-    subtitle: isEpisode
-      ? `S${m.parentIndex}E${m.index} · ${m.title}`
-      : (m.year ? String(m.year) : ''),
+    media: m.type === 'movie' ? 'film' : 'tv', // simple bucket for the UI
+    title,
+    subtitle,
     progress: m.viewOffset && m.duration ? Math.min(1, m.viewOffset / m.duration) : 0,
-    thumb: m.type === 'episode' ? (m.grandparentThumb || m.thumb) : m.thumb,
+    thumb: m.type === 'episode' ? (m.grandparentThumb || m.thumb)
+         : m.type === 'season' ? (m.parentThumb || m.thumb)
+         : m.thumb,
     art: m.art,
     addedAt: m.addedAt,
   }
@@ -148,10 +160,10 @@ router.get('/cinema/recently-added', async (req, res) => {
   const cached = cache.get('recent')
   if (cached) return res.json(cached)
   try {
-    const { data } = await axios.get(`${PLEX_URL}/library/recentlyAdded?X-Plex-Container-Size=18`, { timeout: TIMEOUT, headers: plexHeaders })
+    const { data } = await axios.get(`${PLEX_URL}/library/recentlyAdded?X-Plex-Container-Size=60`, { timeout: TIMEOUT, headers: plexHeaders })
     const items = (data.MediaContainer?.Metadata || [])
       .filter((m) => m.type === 'movie' || m.type === 'season' || m.type === 'show')
-      .map(mapPlexItem).slice(0, 12)
+      .map(mapPlexItem).slice(0, 40)
     cache.set('recent', items)
     res.json(items)
   } catch (e) {

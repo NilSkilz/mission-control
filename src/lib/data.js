@@ -445,7 +445,7 @@ export async function getFilmRequests() {
   return safeList('/film-requests')
 }
 export async function addFilmRequest(req) {
-  return request('/film-requests', { method: 'POST', body: { title: req.title, requestedBy: req.requestedBy, note: req.note || null } })
+  return request('/film-requests', { method: 'POST', body: { title: req.title, requestedBy: req.requestedBy, kind: req.kind || 'film', note: req.note || null } })
 }
 export async function updateFilmRequest(id, updates) {
   return request(`/film-requests/${id}`, { method: 'PATCH', body: updates })
