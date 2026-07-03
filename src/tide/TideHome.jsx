@@ -98,15 +98,16 @@ export default function TideHome() {
   const { users, chores, completions, notes, meals, today, events } = state
   const userById = Object.fromEntries(users.map((u) => [u.id, u]))
 
-  // chores in scope: whole family for parents, just yours for a child
-  const scopedChores = isParent ? chores : chores.filter((c) => c.assignedTo === user.id)
+  // chores in scope: whole family for parents; a child sees theirs + the "anyone" pool
+  const scopedChores = isParent ? chores : chores.filter((c) => c.assignedTo === user.id || !c.assignedTo)
   const choreRows = scopedChores.map((c) => {
     const completion = getTodayCompletion(completions, c.id)
     return {
       ...c,
       done: !!completion,
       approved: completion?.approved,
-      person: userById[c.assignedTo],
+      anyone: !c.assignedTo,
+      person: c.assignedTo ? userById[c.assignedTo] : (completion ? userById[completion.userId] : null),
     }
   })
   const doneCount = choreRows.filter((r) => r.done).length
@@ -172,6 +173,7 @@ export default function TideHome() {
                     }} />
                     <span style={{ textDecoration: r.done ? 'line-through' : 'none' }}>{r.title}</span>
                     {isParent && r.person && <span style={{ marginLeft: 6, display: 'inline-flex', gap: 5, alignItems: 'center' }}><Pip person={r.person} size={7} /><span className="tide-sub" style={{ fontSize: 12 }}>{firstName(r.person).toLowerCase()}</span></span>}
+                    {isParent && !r.person && r.anyone && <span className="tide-sub" style={{ fontSize: 12, marginLeft: 6 }}>anyone</span>}
                     {r.paid && !r.done && <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: 'var(--tide-accent-ink)' }}>+{formatGBP(r.amount)}</span>}
                     {r.done && r.approved && <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: 'var(--p-logan)' }}>approved ✓</span>}
                     {r.done && !r.approved && <span style={{ marginLeft: 'auto', fontSize: 12 }}>⏳</span>}

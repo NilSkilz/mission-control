@@ -44,7 +44,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS chores (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
-    assignedTo TEXT NOT NULL REFERENCES users(id),
+    assignedTo TEXT REFERENCES users(id),
     paid INTEGER NOT NULL DEFAULT 0,
     amount REAL NOT NULL DEFAULT 0,
     recurring TEXT,
@@ -157,6 +157,32 @@ if (db.prepare('SELECT COUNT(*) AS n FROM users').get().n === 0) {
 for (const [col, def] of [['targetUserId', 'TEXT'], ['pinned', 'INTEGER NOT NULL DEFAULT 0']]) {
   const has = db.prepare('PRAGMA table_info(notes)').all().some((c) => c.name === col);
   if (!has) db.exec(`ALTER TABLE notes ADD COLUMN ${col} ${def}`);
+}
+
+// Make chores.assignedTo nullable ("anyone can do it") on DBs where it was
+// created NOT NULL. SQLite can't drop a NOT NULL in place, so rebuild the table.
+const assignedCol = db.prepare('PRAGMA table_info(chores)').all().find((c) => c.name === 'assignedTo');
+if (assignedCol && assignedCol.notnull === 1) {
+  db.pragma('foreign_keys = OFF');
+  db.exec(`
+    BEGIN;
+    CREATE TABLE chores_new (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      assignedTo TEXT REFERENCES users(id),
+      paid INTEGER NOT NULL DEFAULT 0,
+      amount REAL NOT NULL DEFAULT 0,
+      recurring TEXT,
+      templateId TEXT,
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL
+    );
+    INSERT INTO chores_new SELECT id, title, assignedTo, paid, amount, recurring, templateId, createdAt, updatedAt FROM chores;
+    DROP TABLE chores;
+    ALTER TABLE chores_new RENAME TO chores;
+    COMMIT;
+  `);
+  db.pragma('foreign_keys = ON');
 }
 
 // Add passwordHash for real server-side auth (was a client-side hardcoded map).

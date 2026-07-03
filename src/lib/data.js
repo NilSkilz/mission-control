@@ -229,9 +229,10 @@ export async function getCompletionsForChore(choreId) {
   return safeList(`/completions?choreId=${encodeURIComponent(choreId)}`)
 }
 
-// Mark a chore as done - creates a ChoreCompletion record
-export async function markChoreDone(choreId) {
-  const completion = await request(`/chores/${choreId}/complete`, { method: 'POST', body: {} })
+// Mark a chore as done - creates a ChoreCompletion record. Pass userId so an
+// "anyone" chore gets claimed by whoever ticked it.
+export async function markChoreDone(choreId, userId) {
+  const completion = await request(`/chores/${choreId}/complete`, { method: 'POST', body: userId ? { userId } : {} })
   return completion.id
 }
 

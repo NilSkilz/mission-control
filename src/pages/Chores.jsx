@@ -47,6 +47,7 @@ function ChoreTick({ row, onTick, onUndo, canUndo }) {
         {row.done ? '✓' : ''}
       </button>
       <span style={{ textDecoration: row.done ? 'line-through' : 'none' }}>{row.title}</span>
+      {row.anyone && !row.done && <span className="tide-sub" style={{ fontSize: 11, marginLeft: 2 }}>· anyone</span>}
       {row.done && row.approved && <span style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 700, color: 'var(--p-logan)' }}>approved</span>}
       {row.done && !row.approved && <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--tide-muted)' }}>waiting ⏳</span>}
       {!row.done && row.paid && <span style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 700, color: 'var(--tide-accent-ink)' }}>+{formatGBP(row.amount)}</span>}
@@ -55,18 +56,24 @@ function ChoreTick({ row, onTick, onUndo, canUndo }) {
 }
 
 // ---------- child's own view ----------
-function ChildChores({ me, chores, completions, reload }) {
-  const mine = chores.filter((c) => c.assignedTo === me.id)
-  const rows = mine.map((c) => {
+function ChildChores({ me, users, chores, completions, reload }) {
+  const userById = Object.fromEntries(users.map((u) => [u.id, u]))
+  const rowFor = (c) => {
     const completion = getTodayCompletion(completions, c.id)
-    return { ...c, done: !!completion, approved: completion?.approved, completionId: completion?.id }
-  })
-  const done = rows.filter((r) => r.done)
+    return { ...c, anyone: !c.assignedTo, done: !!completion, approved: completion?.approved, completionId: completion?.id, claimedBy: completion?.userId }
+  }
+  const myChores = chores.filter((c) => c.assignedTo === me.id).map(rowFor)
+  const anyoneRows = chores.filter((c) => !c.assignedTo).map(rowFor)
+  // "anyone" chores: still open, or claimed by me → in my list. Claimed by a sibling → shown as taken.
+  const rows = [...myChores, ...anyoneRows.filter((r) => !r.done || r.claimedBy === me.id)]
+  const takenByOthers = anyoneRows.filter((r) => r.done && r.claimedBy !== me.id)
+
+  const done = rows.filter((r) => r.done && r.claimedBy === me.id)
   const todo = rows.filter((r) => !r.done)
-  const waiting = rows.filter((r) => r.done && !r.approved)
+  const waiting = rows.filter((r) => r.done && r.claimedBy === me.id && !r.approved)
   const w = walletFor(me.id, completions)
 
-  const tick = async (c) => { await markChoreDone(c.id); reload() }
+  const tick = async (c) => { await markChoreDone(c.id, me.id); reload() }
   const undo = async (c) => { if (c.completionId) { await deleteCompletion(c.completionId); reload() } }
 
   return (
@@ -87,9 +94,14 @@ function ChildChores({ me, chores, completions, reload }) {
             </div>
           </div>
           <Label style={{ marginTop: 10 }}>today</Label>
-          {rows.length === 0 && <EmptyHint>no chores set for you.</EmptyHint>}
+          {rows.length === 0 && takenByOthers.length === 0 && <EmptyHint>no chores set for you.</EmptyHint>}
           {rows.map((r) => (
             <ChoreTick key={r.id} row={r} canUndo={r.done && !r.approved} onTick={() => tick(r)} onUndo={() => undo(r)} />
+          ))}
+          {takenByOthers.map((r) => (
+            <div key={r.id} className="tide-sub" style={{ fontSize: 12.5, padding: '4px 0', opacity: 0.8 }}>
+              {firstName(userById[r.claimedBy]).toLowerCase()} grabbed “{r.title}”
+            </div>
           ))}
         </div>
 
@@ -119,7 +131,9 @@ function ChildChores({ me, chores, completions, reload }) {
 // ---------- parent view: approve, pay out, create ----------
 function ParentChores({ users, chores, completions, reload }) {
   const kids = users.filter((u) => u.role === 'child')
-  const [form, setForm] = useState({ title: '', assignedTo: kids[0]?.id || '', amount: 0.5, paid: true, recurring: 'daily' })
+  const userById = Object.fromEntries(users.map((u) => [u.id, u]))
+  const today = getToday()
+  const [form, setForm] = useState({ title: '', assignedTo: 'anyone', amount: 0.5, paid: true, recurring: 'daily' })
   const [busy, setBusy] = useState(false)
 
   const approve = async (id) => { await approveCompletion(id); reload() }
@@ -130,11 +144,18 @@ function ParentChores({ users, chores, completions, reload }) {
     e.preventDefault()
     if (!form.title || !form.assignedTo) return
     setBusy(true)
-    await addChore({ ...form, amount: Number(form.amount) || 0, recurring: form.recurring || null })
+    await addChore({
+      ...form,
+      assignedTo: form.assignedTo === 'anyone' ? null : form.assignedTo,
+      amount: Number(form.amount) || 0,
+      recurring: form.recurring || null,
+    })
     setForm({ ...form, title: '' })
     setBusy(false)
     reload()
   }
+
+  const anyoneChores = chores.filter((c) => !c.assignedTo)
 
   return (
     <>
@@ -149,7 +170,10 @@ function ParentChores({ users, chores, completions, reload }) {
             const completion = getTodayCompletion(completions, c.id)
             return { ...c, done: !!completion, approved: completion?.approved, completionId: completion?.id }
           })
-          const waiting = rows.filter((r) => r.done && !r.approved)
+          // approval is driven by this kid's completions today (includes claimed "anyone" chores)
+          const waiting = completions
+            .filter((c) => c.userId === kid.id && !c.approved && c.completedAt?.slice(0, 10) === today)
+            .map((c) => ({ id: c.id, completionId: c.id, title: c.choreTitle, amount: c.amount }))
           return (
             <div key={kid.id} className="tide-card" style={{ padding: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -192,6 +216,27 @@ function ParentChores({ users, chores, completions, reload }) {
             </div>
           )
         })}
+
+        {anyoneChores.length > 0 && (
+          <div className="tide-card" style={{ padding: 16 }}>
+            <Label>anyone can do these</Label>
+            <p className="tide-sub" style={{ fontSize: 12, marginTop: -4, marginBottom: 8 }}>first to tick it claims it</p>
+            {anyoneChores.map((c) => {
+              const completion = getTodayCompletion(completions, c.id)
+              const claimer = completion ? userById[completion.userId] : null
+              return (
+                <div key={c.id} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '4px 0', fontSize: 14 }}>
+                  <Pip person={claimer} size={7} />
+                  <span>{c.title}</span>
+                  {c.paid && <span className="tide-sub" style={{ fontSize: 12 }}>{formatGBP(c.amount)}</span>}
+                  <span className="tide-sub" style={{ fontSize: 11 }}>{c.recurring || 'one-off'}</span>
+                  {claimer && <span style={{ fontSize: 12, color: completion.approved ? 'var(--p-logan)' : 'var(--tide-accent-ink)' }}>{firstName(claimer).toLowerCase()} {completion.approved ? '✓' : '⏳'}</span>}
+                  <button onClick={() => removeChore(c.id)} title="delete" style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--tide-faint)', cursor: 'pointer', fontSize: 15 }}>×</button>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* create */}
@@ -200,6 +245,7 @@ function ParentChores({ users, chores, completions, reload }) {
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           <input className="tide-input" style={{ flex: '2 1 180px' }} placeholder="what needs doing?" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           <select className="tide-input" style={{ flex: '1 1 120px' }} value={form.assignedTo} onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}>
+            <option value="anyone">anyone</option>
             {kids.map((k) => <option key={k.id} value={k.id}>{firstName(k)}</option>)}
           </select>
           <select className="tide-input" style={{ flex: '0 1 120px' }} value={form.recurring} onChange={(e) => setForm({ ...form, recurring: e.target.value })}>
@@ -233,5 +279,5 @@ export default function ChoresPage() {
 
   return user?.role === 'parent'
     ? <ParentChores users={state.users} chores={state.chores} completions={state.completions} reload={reload} />
-    : <ChildChores me={user} chores={state.chores} completions={state.completions} reload={reload} />
+    : <ChildChores me={user} users={state.users} chores={state.chores} completions={state.completions} reload={reload} />
 }
