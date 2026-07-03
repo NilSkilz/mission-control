@@ -186,7 +186,7 @@ export default function TideHome() {
         {/* right column: notes + dinner */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
           <div className="tide-card" style={{ padding: 16 }}>
-            <Label>mum says</Label>
+            <Label>notice board</Label>
             {freshNotes.length === 0 ? (
               <EmptyHint>no notes right now.</EmptyHint>
             ) : (
