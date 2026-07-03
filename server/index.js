@@ -48,6 +48,14 @@ async function setupRoutes() {
   }
 
   try {
+    const familyModule = await import('./routes/family.js');
+    app.use('/api/family', familyModule.default);
+    console.log('✓ Family data routes loaded');
+  } catch (e) {
+    console.error('✗ Failed to load family routes:', e.message);
+  }
+
+  try {
     const calModule = await import('./routes/calendar.js');
     app.use('/api/calendar', calModule.default);
     console.log('✓ Calendar routes loaded');

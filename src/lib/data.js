@@ -1,175 +1,106 @@
-import { generateClient } from 'aws-amplify/data'
+// Family data layer. Talks to the local SQLite store via /api/family on the
+// Express server (replaced the old AWS Amplify/DynamoDB backend). Exported
+// function signatures are unchanged from the Amplify era so pages don't care.
 
-// Amplify is configured in main.jsx at startup
-// Generate the client once; null when running without the AWS backend
-let client = null
-try {
-  client = generateClient()
-} catch (e) {
-  console.warn('Amplify data client unavailable, family data disabled:', e.message)
-}
+const API_BASE = `${import.meta.env.VITE_API_URL || ''}/api/family`
 
-async function getClient() {
-  return client
-}
-
-// Helper to check if client is available
-async function requireClient() {
-  const c = await getClient()
-  if (!c) {
-    throw new Error('Amplify not configured. Run `npx ampx sandbox` to start local development.')
+async function request(path, options = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+  })
+  if (!res.ok) {
+    let message = `HTTP ${res.status}`
+    try {
+      message = (await res.json()).error || message
+    } catch { /* non-JSON error body */ }
+    throw new Error(message)
   }
-  return c
+  if (res.status === 204) return null
+  return res.json()
+}
+
+// List endpoints degrade to [] so pages render without the API (e.g. vite-only dev)
+async function safeList(path) {
+  try {
+    return await request(path)
+  } catch (e) {
+    console.warn(`GET ${path} failed:`, e.message)
+    return []
+  }
 }
 
 // ==================== USERS ====================
 
 export async function getUsers() {
-  const c = await getClient()
-  if (!c) return []
-  
-  try {
-    const { data, errors } = await c.models.User.list()
-    if (errors) {
-      console.error('Error fetching users:', errors)
-      return []
-    }
-    return data || []
-  } catch (e) {
-    console.warn('getUsers failed:', e.message)
-    return []
-  }
+  return safeList('/users')
 }
 
 export async function getUserById(id) {
-  const c = await requireClient()
-  const { data, errors } = await c.models.User.get({ id })
-  if (errors) {
-    console.error('Error fetching user:', errors)
-    return null
-  }
-  return data || null
+  return request(`/users/${id}`)
 }
 
 export async function getUserByUsername(username) {
-  const c = await requireClient()
-  const { data, errors } = await c.models.User.list({
-    filter: { username: { eq: username } },
-  })
-  if (errors) {
-    console.error('Error fetching user by username:', errors)
-    return null
-  }
-  return data?.[0] || null
+  const users = await getUsers()
+  return users.find((u) => u.username === username) || null
 }
 
 export async function createUser(user) {
-  const c = await requireClient()
-  const { data, errors } = await c.models.User.create({
-    username: user.username,
-    displayName: user.displayName,
-    role: user.role,
-    avatar: user.avatar || null,
-  })
-  if (errors) {
-    console.error('Error creating user:', errors)
-    throw new Error('Failed to create user')
-  }
-  return data.id
+  const created = await request('/users', { method: 'POST', body: user })
+  return created.id
 }
 
 // ==================== CHORE TEMPLATES ====================
 
 export async function getChoreTemplates() {
-  const c = await getClient()
-  if (!c) return []
-  
-  try {
-    const { data, errors } = await c.models.ChoreTemplate.list()
-    if (errors) {
-      console.error('Error fetching chore templates:', errors)
-      return []
-    }
-    return data || []
-  } catch (e) {
-    console.warn('getChoreTemplates failed:', e.message)
-    return []
-  }
+  return safeList('/chore-templates')
 }
 
 export async function addChoreTemplate(template) {
-  const c = await requireClient()
-  const { data, errors } = await c.models.ChoreTemplate.create({
-    title: template.title,
-    defaultAmount: template.defaultAmount || 0,
-    paid: template.paid || false,
-    suggestedRecurring: template.suggestedRecurring || null,
+  const created = await request('/chore-templates', {
+    method: 'POST',
+    body: {
+      title: template.title,
+      defaultAmount: template.defaultAmount || 0,
+      paid: template.paid || false,
+      suggestedRecurring: template.suggestedRecurring || null,
+    },
   })
-  if (errors) {
-    console.error('Error creating chore template:', errors)
-    throw new Error('Failed to create chore template')
-  }
-  return data.id
+  return created.id
 }
 
 export async function deleteChoreTemplate(id) {
-  const c = await requireClient()
-  const { errors } = await c.models.ChoreTemplate.delete({ id })
-  if (errors) {
-    console.error('Error deleting chore template:', errors)
-    throw new Error('Failed to delete chore template')
-  }
+  await request(`/chore-templates/${id}`, { method: 'DELETE' })
 }
 
 // ==================== CHORES ====================
 
 export async function getChores() {
-  const c = await getClient()
-  if (!c) return []
-  
-  try {
-    const { data, errors } = await c.models.Chore.list()
-    if (errors) {
-      console.error('Error fetching chores:', errors)
-      return []
-    }
-    return data || []
-  } catch (e) {
-    console.warn('getChores failed:', e.message)
-    return []
-  }
+  return safeList('/chores')
 }
 
 export async function getChoreById(id) {
-  const c = await requireClient()
-  const { data, errors } = await c.models.Chore.get({ id })
-  if (errors) {
-    console.error('Error fetching chore:', errors)
-    return null
-  }
-  return data || null
+  return request(`/chores/${id}`)
 }
 
 export async function addChore(chore) {
-  const c = await requireClient()
-  const { data, errors } = await c.models.Chore.create({
-    title: chore.title,
-    assignedTo: chore.assigned_to || chore.assignedTo,
-    paid: chore.paid ? true : false,
-    amount: chore.amount || 0,
-    recurring: chore.recurring || null,
-    templateId: chore.templateId || null,
+  const created = await request('/chores', {
+    method: 'POST',
+    body: {
+      title: chore.title,
+      assignedTo: chore.assigned_to || chore.assignedTo,
+      paid: !!chore.paid,
+      amount: chore.amount || 0,
+      recurring: chore.recurring || null,
+      templateId: chore.templateId || null,
+    },
   })
-  if (errors) {
-    console.error('Error creating chore:', errors)
-    throw new Error('Failed to create chore')
-  }
-  return data.id
+  return created.id
 }
 
 export async function updateChore(id, updates) {
-  const c = await requireClient()
-  // Convert snake_case to camelCase
+  // Tolerate snake_case callers (pre-Amplify field names)
   const cleanUpdates = {}
   for (const [key, value] of Object.entries(updates)) {
     const dbKey = key === 'assigned_to' ? 'assignedTo'
@@ -177,360 +108,122 @@ export async function updateChore(id, updates) {
                : key
     cleanUpdates[dbKey] = value
   }
-
-  const { errors } = await c.models.Chore.update({
-    id,
-    ...cleanUpdates,
-  })
-  if (errors) {
-    console.error('Error updating chore:', errors)
-    throw new Error('Failed to update chore')
-  }
+  await request(`/chores/${id}`, { method: 'PATCH', body: cleanUpdates })
 }
 
 export async function deleteChore(id) {
-  const c = await requireClient()
-  const { errors } = await c.models.Chore.delete({ id })
-  if (errors) {
-    console.error('Error deleting chore:', errors)
-    throw new Error('Failed to delete chore')
-  }
+  await request(`/chores/${id}`, { method: 'DELETE' })
 }
 
 // ==================== CHORE COMPLETIONS ====================
 
 export async function getChoreCompletions() {
-  const c = await getClient()
-  if (!c) return []
-  
-  try {
-    const { data, errors } = await c.models.ChoreCompletion.list()
-    if (errors) {
-      console.error('Error fetching chore completions:', errors)
-      return []
-    }
-    return data || []
-  } catch (e) {
-    console.warn('getChoreCompletions failed:', e.message)
-    return []
-  }
+  return safeList('/completions')
 }
 
 export async function getCompletionsForUser(userId) {
-  const c = await getClient()
-  if (!c) return []
-  
-  try {
-    const { data, errors } = await c.models.ChoreCompletion.list({
-      filter: { userId: { eq: userId } },
-    })
-    if (errors) {
-      console.error('Error fetching completions for user:', errors)
-      return []
-    }
-    return data || []
-  } catch (e) {
-    console.warn('getCompletionsForUser failed:', e.message)
-    return []
-  }
+  return safeList(`/completions?userId=${encodeURIComponent(userId)}`)
 }
 
 export async function getCompletionsForChore(choreId) {
-  const c = await getClient()
-  if (!c) return []
-  
-  try {
-    const { data, errors } = await c.models.ChoreCompletion.list({
-      filter: { choreId: { eq: choreId } },
-    })
-    if (errors) {
-      console.error('Error fetching completions for chore:', errors)
-      return []
-    }
-    return data || []
-  } catch (e) {
-    console.warn('getCompletionsForChore failed:', e.message)
-    return []
-  }
+  return safeList(`/completions?choreId=${encodeURIComponent(choreId)}`)
 }
 
 // Mark a chore as done - creates a ChoreCompletion record
 export async function markChoreDone(choreId) {
-  const c = await requireClient()
-  
-  // Get the chore details
-  const chore = await getChoreById(choreId)
-  if (!chore) {
-    throw new Error('Chore not found')
-  }
-  
-  // Create a completion record
-  const now = new Date().toISOString()
-  const { data, errors } = await c.models.ChoreCompletion.create({
-    choreId: choreId,
-    userId: chore.assignedTo,
-    choreTitle: chore.title,
-    amount: chore.paid ? (chore.amount || 0) : 0,
-    completedAt: now,
-    approved: false,
-    approvedAt: null,
-    paidOut: false,
-    paidAt: null,
-  })
-  
-  if (errors) {
-    console.error('Error creating chore completion:', errors)
-    throw new Error('Failed to mark chore as done')
-  }
-  
-  return data.id
+  const completion = await request(`/chores/${choreId}/complete`, { method: 'POST', body: {} })
+  return completion.id
 }
 
 // Approve a completion
 export async function approveCompletion(completionId) {
-  const c = await requireClient()
-  const { errors } = await c.models.ChoreCompletion.update({
-    id: completionId,
-    approved: true,
-    approvedAt: new Date().toISOString(),
-  })
-  if (errors) {
-    console.error('Error approving completion:', errors)
-    throw new Error('Failed to approve completion')
-  }
+  await request(`/completions/${completionId}/approve`, { method: 'POST', body: {} })
 }
 
 // Delete a completion (for undoing accidental marks)
 export async function deleteCompletion(completionId) {
-  const c = await requireClient()
-  const { errors } = await c.models.ChoreCompletion.delete({ id: completionId })
-  if (errors) {
-    console.error('Error deleting completion:', errors)
-    throw new Error('Failed to delete completion')
-  }
+  await request(`/completions/${completionId}`, { method: 'DELETE' })
 }
 
 // Pay out all approved unpaid completions for a user
 export async function payOutChores(userId) {
-  const c = await requireClient()
-  const completions = await getCompletionsForUser(userId)
-  const now = new Date().toISOString()
-  
-  // Find all approved but unpaid completions
-  const toPay = completions.filter(comp => comp.approved && !comp.paidOut)
-  
-  for (const completion of toPay) {
-    const { errors } = await c.models.ChoreCompletion.update({
-      id: completion.id,
-      paidOut: true,
-      paidAt: now,
-    })
-    if (errors) {
-      console.error('Error marking completion as paid:', errors)
-    }
-  }
-  
-  return toPay.length
+  const result = await request(`/users/${userId}/payout`, { method: 'POST', body: {} })
+  return result.paid
 }
 
 // ==================== MEALS ====================
 
 export async function getMeals() {
-  const c = await getClient()
-  if (!c) return []
-  
-  try {
-    const { data, errors } = await c.models.Meal.list()
-    if (errors) {
-      console.error('Error fetching meals:', errors)
-      return []
-    }
-    return data || []
-  } catch (e) {
-    console.warn('getMeals failed:', e.message)
-    return []
-  }
+  return safeList('/meals')
 }
 
 export async function getMealByDateAndType(date, type) {
-  const c = await requireClient()
-  const { data, errors } = await c.models.Meal.list({
-    filter: {
-      date: { eq: date },
-      mealType: { eq: type },
-    },
-  })
-  if (errors) {
-    console.error('Error fetching meal:', errors)
-    return null
-  }
-  return data?.[0] || null
+  const meals = await getMeals()
+  return meals.find((m) => m.date === date && m.mealType === type) || null
 }
 
 export async function setMeal(date, mealType, meal, mealId = null) {
-  const c = await requireClient()
-  const existing = await getMealByDateAndType(date, mealType)
-
-  if (existing) {
-    if (meal) {
-      // Update existing
-      const { errors } = await c.models.Meal.update({
-        id: existing.id,
-        meal,
-        mealId,
-      })
-      if (errors) {
-        console.error('Error updating meal:', errors)
-        throw new Error('Failed to update meal')
-      }
-    } else {
-      // Delete if meal is empty
-      const { errors } = await c.models.Meal.delete({ id: existing.id })
-      if (errors) {
-        console.error('Error deleting meal:', errors)
-        throw new Error('Failed to delete meal')
-      }
-    }
-  } else if (meal) {
-    // Create new
-    const { errors } = await c.models.Meal.create({
-      date,
-      mealType,
-      meal,
-      mealId,
-    })
-    if (errors) {
-      console.error('Error creating meal:', errors)
-      throw new Error('Failed to create meal')
-    }
-  }
+  await request('/meals', { method: 'PUT', body: { date, mealType, meal, mealId } })
 }
 
 // ==================== MEAL RECIPES (Recipe Book) ====================
 
 export async function getMealRecipes() {
-  const c = await getClient()
-  if (!c) return []
-  
-  try {
-    const { data, errors } = await c.models.MealRecipe.list()
-    if (errors) {
-      console.error('Error fetching meal recipes:', errors)
-      return []
-    }
-    return (data || []).map(recipe => ({
-      ...recipe,
-      // Parse ingredients from JSON string
-      ingredients: recipe.ingredients ? JSON.parse(recipe.ingredients) : [],
-      tags: recipe.tags || [],
-    }))
-  } catch (e) {
-    console.warn('getMealRecipes failed:', e.message)
-    return []
-  }
+  return safeList('/recipes')
 }
 
 export async function getMealRecipeById(id) {
-  const c = await requireClient()
-  const { data, errors } = await c.models.MealRecipe.get({ id })
-  if (errors) {
-    console.error('Error fetching meal recipe:', errors)
-    return null
-  }
-  if (!data) return null
-  return {
-    ...data,
-    ingredients: data.ingredients ? JSON.parse(data.ingredients) : [],
-    tags: data.tags || [],
-  }
+  return request(`/recipes/${id}`)
 }
 
 export async function addMealRecipe(recipe) {
-  const c = await requireClient()
-  const { data, errors } = await c.models.MealRecipe.create({
-    name: recipe.name,
-    category: recipe.category,
-    tags: recipe.tags || [],
-    serves: recipe.serves || null,
-    time: recipe.time || null,
-    day: recipe.day || null,
-    note: recipe.note || null,
-    ingredients: JSON.stringify(recipe.ingredients || []),
-    isCustom: recipe.isCustom !== false, // default true
+  const created = await request('/recipes', {
+    method: 'POST',
+    body: {
+      name: recipe.name,
+      category: recipe.category,
+      tags: recipe.tags || [],
+      serves: recipe.serves || null,
+      time: recipe.time || null,
+      day: recipe.day || null,
+      note: recipe.note || null,
+      ingredients: recipe.ingredients || [],
+      isCustom: recipe.isCustom !== false, // default true
+    },
   })
-  if (errors) {
-    console.error('Error creating meal recipe:', errors)
-    throw new Error('Failed to create meal recipe')
-  }
-  return data.id
+  return created.id
 }
 
 export async function updateMealRecipe(id, updates) {
-  const c = await requireClient()
-  const cleanUpdates = { ...updates }
-  
-  // Convert ingredients array to JSON string if present
-  if (cleanUpdates.ingredients && Array.isArray(cleanUpdates.ingredients)) {
-    cleanUpdates.ingredients = JSON.stringify(cleanUpdates.ingredients)
-  }
-
-  const { errors } = await c.models.MealRecipe.update({
-    id,
-    ...cleanUpdates,
-  })
-  if (errors) {
-    console.error('Error updating meal recipe:', errors)
-    throw new Error('Failed to update meal recipe')
-  }
+  await request(`/recipes/${id}`, { method: 'PATCH', body: updates })
 }
 
 export async function deleteMealRecipe(id) {
-  const c = await requireClient()
-  const { errors } = await c.models.MealRecipe.delete({ id })
-  if (errors) {
-    console.error('Error deleting meal recipe:', errors)
-    throw new Error('Failed to delete meal recipe')
-  }
+  await request(`/recipes/${id}`, { method: 'DELETE' })
 }
 
 // ==================== SHOPPING ====================
 
 export async function getShoppingItems() {
-  const c = await getClient()
-  if (!c) return []
-  
-  try {
-    const { data, errors } = await c.models.ShoppingItem.list()
-    if (errors) {
-      console.error('Error fetching shopping items:', errors)
-      return []
-    }
-    return data || []
-  } catch (e) {
-    console.warn('getShoppingItems failed:', e.message)
-    return []
-  }
+  return safeList('/shopping')
 }
 
 export async function addShoppingItem(item) {
-  const c = await requireClient()
-  const { data, errors } = await c.models.ShoppingItem.create({
-    name: item.name,
-    quantity: item.quantity || 1,
-    estimatedCost: item.estimated_cost || item.estimatedCost || null,
-    addedBy: item.added_by || item.addedBy || null,
-    checked: false,
+  const created = await request('/shopping', {
+    method: 'POST',
+    body: {
+      name: item.name,
+      quantity: item.quantity || 1,
+      estimatedCost: item.estimated_cost || item.estimatedCost || null,
+      addedBy: item.added_by || item.addedBy || null,
+      checked: false,
+    },
   })
-  if (errors) {
-    console.error('Error creating shopping item:', errors)
-    throw new Error('Failed to create shopping item')
-  }
-  return data.id
+  return created.id
 }
 
 export async function updateShoppingItem(id, updates) {
-  const c = await requireClient()
-  // Convert snake_case to camelCase
+  // Tolerate snake_case callers (pre-Amplify field names)
   const cleanUpdates = {}
   for (const [key, value] of Object.entries(updates)) {
     const dbKey = key === 'estimated_cost' ? 'estimatedCost'
@@ -538,33 +231,44 @@ export async function updateShoppingItem(id, updates) {
                : key
     cleanUpdates[dbKey] = value
   }
-
-  const { errors } = await c.models.ShoppingItem.update({
-    id,
-    ...cleanUpdates,
-  })
-  if (errors) {
-    console.error('Error updating shopping item:', errors)
-    throw new Error('Failed to update shopping item')
-  }
+  await request(`/shopping/${id}`, { method: 'PATCH', body: cleanUpdates })
 }
 
 export async function deleteShoppingItem(id) {
-  const c = await requireClient()
-  const { errors } = await c.models.ShoppingItem.delete({ id })
-  if (errors) {
-    console.error('Error deleting shopping item:', errors)
-    throw new Error('Failed to delete shopping item')
-  }
+  await request(`/shopping/${id}`, { method: 'DELETE' })
 }
 
 export async function clearCheckedItems() {
-  const items = await getShoppingItems()
-  const checkedItems = items.filter((i) => i.checked)
+  await request('/shopping/clear-checked', { method: 'POST', body: {} })
+}
 
-  for (const item of checkedItems) {
-    await deleteShoppingItem(item.id)
-  }
+// ==================== NOTES ====================
+
+export async function getNotes({ includeExpired = false } = {}) {
+  return safeList(`/notes${includeExpired ? '?includeExpired=1' : ''}`)
+}
+
+export async function addNote(note) {
+  return request('/notes', {
+    method: 'POST',
+    body: {
+      authorId: note.authorId,
+      body: note.body,
+      expiresAt: note.expiresAt || null,
+    },
+  })
+}
+
+export async function updateNote(id, updates) {
+  return request(`/notes/${id}`, { method: 'PATCH', body: updates })
+}
+
+export async function deleteNote(id) {
+  await request(`/notes/${id}`, { method: 'DELETE' })
+}
+
+export async function markNoteSeen(id, userId) {
+  return request(`/notes/${id}/seen`, { method: 'POST', body: { userId } })
 }
 
 // ==================== EARNINGS ====================
