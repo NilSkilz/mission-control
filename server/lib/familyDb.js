@@ -110,6 +110,8 @@ db.exec(`
     id TEXT PRIMARY KEY,
     authorId TEXT NOT NULL REFERENCES users(id),
     body TEXT NOT NULL,
+    targetUserId TEXT REFERENCES users(id),
+    pinned INTEGER NOT NULL DEFAULT 0,
     expiresAt TEXT,
     createdAt TEXT NOT NULL,
     updatedAt TEXT NOT NULL
@@ -140,12 +142,19 @@ if (db.prepare('SELECT COUNT(*) AS n FROM users').get().n === 0) {
   for (const u of seedUsers) insert.run({ ...u, id: randomUUID(), now });
 }
 
+// Migrate DBs created before the notes targeting/pinning columns existed.
+for (const [col, def] of [['targetUserId', 'TEXT'], ['pinned', 'INTEGER NOT NULL DEFAULT 0']]) {
+  const has = db.prepare('PRAGMA table_info(notes)').all().some((c) => c.name === col);
+  if (!has) db.exec(`ALTER TABLE notes ADD COLUMN ${col} ${def}`);
+}
+
 const BOOL_COLUMNS = {
   choreTemplates: ['paid'],
   chores: ['paid'],
   choreCompletions: ['approved', 'paidOut'],
   mealRecipes: ['isCustom'],
   shoppingItems: ['checked'],
+  notes: ['pinned'],
 };
 
 // SQLite stores booleans as 0/1; convert both directions so the API speaks JSON booleans

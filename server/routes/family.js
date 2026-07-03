@@ -202,11 +202,13 @@ router.get('/notes', (req, res) => {
     const now = new Date().toISOString();
     notes = notes.filter((n) => !n.expiresAt || n.expiresAt > now);
   }
+  // pinned first, then newest
+  notes.sort((a, b) => (b.pinned - a.pinned) || (b.createdAt || '').localeCompare(a.createdAt || ''));
   res.json(notes.map(serveNote));
 });
 
 router.post('/notes', (req, res) => {
-  const data = pick(req.body, ['authorId', 'body', 'expiresAt']);
+  const data = pick(req.body, ['authorId', 'body', 'targetUserId', 'pinned', 'expiresAt']);
   if (!data.authorId || !data.body) return res.status(400).json({ error: 'authorId and body required' });
   try {
     res.status(201).json(serveNote(create('notes', data)));
@@ -216,7 +218,7 @@ router.post('/notes', (req, res) => {
 });
 
 router.patch('/notes/:id', (req, res) => {
-  const row = update('notes', req.params.id, pick(req.body, ['body', 'expiresAt']));
+  const row = update('notes', req.params.id, pick(req.body, ['body', 'targetUserId', 'pinned', 'expiresAt']));
   if (!row) return res.status(404).json({ error: 'not found' });
   res.json(serveNote(row));
 });

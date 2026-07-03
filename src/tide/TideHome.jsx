@@ -66,8 +66,11 @@ export default function TideHome() {
   // dinner for today
   const dinner = meals.find((m) => m.date === today && (m.mealType || '').toLowerCase() === 'dinner')
 
-  // notes: freshest first, non-expired (server already drops expired). label "mum says" if from Aimee.
-  const freshNotes = [...notes].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 3)
+  // notes for this viewer: to everyone, to them, or written by them. freshest first.
+  const freshNotes = notes
+    .filter((n) => !n.targetUserId || n.targetUserId === user.id || n.authorId === user.id)
+    .sort((a, b) => (b.pinned - a.pinned) || (b.createdAt || '').localeCompare(a.createdAt || ''))
+    .slice(0, 3)
 
   // headline for the greeting sub-line
   const nextEvent = events.find((e) => !e.allDay && e.sortKey >= nowMinutes(now))

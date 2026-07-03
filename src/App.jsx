@@ -4,6 +4,7 @@ import { TideThemeProvider } from './tide/TideThemeProvider'
 import TideShell from './tide/TideShell'
 import TidePlaceholder from './tide/TidePlaceholder'
 import TideHome from './tide/TideHome'
+import TideNotes from './tide/TideNotes'
 import SystemFrame from './tide/SystemFrame'
 import LoginScreen from './components/LoginScreen'
 
@@ -77,7 +78,7 @@ function AppRoutes() {
       <Route path="/meals" element={<Family><MealsPage /></Family>} />
       <Route path="/meals/manage" element={<Family requireParent><MealsManagerPage /></Family>} />
       <Route path="/shopping" element={<Family><ShoppingPage /></Family>} />
-      <Route path="/notes" element={<Family><TidePlaceholder title="notes" note="Aimee's superpower: notes targeted at a person or everyone, pinned or set to expire, with seen-by receipts. Card 5." /></Family>} />
+      <Route path="/notes" element={<Family><TideNotes /></Family>} />
       <Route path="/jarvis" element={<Family><TidePlaceholder title="jarvis" note="Family chat with me, scoped per person. Wired through the existing bridge. Built last, card 10." /></Family>} />
 
       {/* system (legacy sci-fi, parent-only) */}

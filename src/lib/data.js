@@ -254,6 +254,8 @@ export async function addNote(note) {
     body: {
       authorId: note.authorId,
       body: note.body,
+      targetUserId: note.targetUserId || null,
+      pinned: !!note.pinned,
       expiresAt: note.expiresAt || null,
     },
   })
