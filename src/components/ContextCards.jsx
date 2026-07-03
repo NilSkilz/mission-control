@@ -92,19 +92,6 @@ const CONTEXT_RULES = [
     })
   },
   {
-    id: 'tesla-charging',
-    name: 'Tesla Charging',
-    entity: 'switch.timmy_charger',
-    condition: (state) => state?.state === 'on',
-    icon: Icons.car,
-    color: 'border-green-500/40',
-    render: (state) => ({
-      title: 'Timmy Charging',
-      subtitle: 'Connected',
-      detail: null
-    })
-  },
-  {
     id: 'high-power',
     name: 'High Power Usage',
     entity: 'sensor.shellyem_34945470ed50_channel_1_power',

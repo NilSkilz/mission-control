@@ -114,18 +114,15 @@ export function PredictiveCards() {
 
       try {
         // Fetch current data
-        const [weatherRes, statsRes, teslaRes] = await Promise.allSettled([
+        const [weatherRes, statsRes] = await Promise.allSettled([
           fetch('https://wttr.in/Crackington+Haven?format=j1'),
-          fetch(`${API_BASE}/api/ha/stats`),
-          fetch(`${API_BASE}/api/ha/tesla`)
+          fetch(`${API_BASE}/api/ha/stats`)
         ]);
 
-        const weather = weatherRes.status === 'fulfilled' && weatherRes.value.ok 
+        const weather = weatherRes.status === 'fulfilled' && weatherRes.value.ok
           ? await weatherRes.value.json() : null;
-        const stats = statsRes.status === 'fulfilled' && statsRes.value.ok 
+        const stats = statsRes.status === 'fulfilled' && statsRes.value.ok
           ? await statsRes.value.json() : null;
-        const tesla = teslaRes.status === 'fulfilled' && teslaRes.value.ok 
-          ? await teslaRes.value.json() : null;
 
         const now = new Date();
         const hour = now.getHours();
@@ -218,28 +215,6 @@ export function PredictiveCards() {
               title: '// POWER_TIP',
               prediction: 'Peak rate hours - defer heavy loads',
               confidence: 'Off-peak starts at 11pm',
-              type: 'info'
-            });
-          }
-        }
-
-        // Tesla/EV prediction
-        if (tesla?.data?.available) {
-          // If we had battery level, we could predict charging needs
-          // For now, show charging status
-          if (tesla.data.charging?.is_charging) {
-            newPredictions.push({
-              icon: Icons.car,
-              title: '// TIMMY',
-              prediction: 'Currently charging',
-              confidence: 'Using off-peak rates',
-              type: 'success'
-            });
-          } else if (hour >= 6 && hour <= 9) {
-            newPredictions.push({
-              icon: Icons.car,
-              title: '// TIMMY',
-              prediction: 'Morning - check range for commute',
               type: 'info'
             });
           }

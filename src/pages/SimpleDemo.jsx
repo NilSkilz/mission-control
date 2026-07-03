@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Card } from '../components/ui'
-import { TeslaWidget } from '../components/HomeAssistantWidget'
 import { useApiCall } from '../lib/api'
 import { LineChart, Line, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import * as data from '../lib/data'
@@ -918,8 +917,6 @@ function EnvironmentPanel() {
         activityType="panel-active"
       />
       
-      {/* Tesla */}
-      <TeslaWidget />
       
       {/* Predictive Intelligence */}
       <PredictiveCards />

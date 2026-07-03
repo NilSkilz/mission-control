@@ -41,11 +41,6 @@ class APIClient {
     return this.request('/stats')
   }
 
-  // GET /api/ha/tesla - Timmy status (charge, sentry, etc.)
-  async getTesla() {
-    return this.request('/tesla')
-  }
-
   // GET /api/ha/devices - Device status (lights, switches, sensors)
   async getDevices() {
     return this.request('/devices')
