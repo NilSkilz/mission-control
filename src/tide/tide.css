@@ -20,7 +20,9 @@
 }
 
 /* ---- NIGHT (default) ------------------------------------- */
-:root[data-tide-theme='night'],
+/* attribute matches :root (set by the provider) or any wrapper (e.g. Cinema
+   forces night on a section), so tokens can be re-scoped locally. */
+[data-tide-theme='night'],
 :root:not([data-tide-theme]) {
   --tide-ground: #14151b;
   --tide-ink: #edeef2;
@@ -38,7 +40,7 @@
 }
 
 /* ---- DAY ------------------------------------------------- */
-:root[data-tide-theme='day'] {
+[data-tide-theme='day'] {
   --tide-ground: #f6f4f0;
   --tide-ink: #24262e;
   --tide-muted: #7c808a;
@@ -259,13 +261,17 @@
   right: 0;
   z-index: 40;
   display: flex;
-  justify-content: space-around;
+  justify-content: space-between;
+  gap: 2px;
   padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
   background: color-mix(in srgb, var(--tide-ground) 82%, transparent);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-top: 1px solid var(--tide-hair);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.tide-tabbar::-webkit-scrollbar { display: none; }
 .tide-tabbar a {
   display: flex;
   flex-direction: column;
@@ -275,7 +281,8 @@
   font-weight: 600;
   color: var(--tide-faint);
   text-decoration: none;
-  flex: 1;
+  flex: 1 0 auto;
+  min-width: 54px;
 }
 .tide-tabbar a.on { color: var(--tide-nav-on); }
 .tide-tabbar a.on svg { stroke: url(#tideTabGrad); }

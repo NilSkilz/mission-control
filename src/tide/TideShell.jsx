@@ -9,6 +9,8 @@ const ICONS = {
   chores: 'M4 12l5 5L20 6',
   notes: 'M4 5h16v11H9l-5 4V5z',
   meals: 'M5 3v8m3-8v8m-3 0v10M8 11v10M15 3c-1.5 1-2 3-2 5s.5 3 2 3 2-1 2-3-.5-4-2-5zm.5 8v10',
+  cinema: 'M4 5h16v14H4zM4 9h16M8 5v4m8-4v4M8 19v-4m8 4v-4M4 15h16',
+  house: 'M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5M10 21v-6h4v6',
 }
 
 function NavIcon({ name }) {
@@ -27,6 +29,8 @@ const NAV = [
   { key: 'chores', label: 'chores', to: '/chores', icon: 'chores' },
   { key: 'meals', label: 'meals', to: '/meals', icon: 'meals' },
   { key: 'notes', label: 'notes', to: '/notes', icon: 'notes' },
+  { key: 'cinema', label: 'cinema', to: '/cinema', icon: 'cinema' },
+  { key: 'house', label: 'house', to: '/house', icon: 'house' },
 ]
 
 function currentKey(pathname) {

@@ -123,6 +123,16 @@ db.exec(`
     seenAt TEXT NOT NULL,
     PRIMARY KEY (noteId, userId)
   );
+
+  CREATE TABLE IF NOT EXISTS filmRequests (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    requestedBy TEXT NOT NULL REFERENCES users(id),
+    status TEXT NOT NULL DEFAULT 'pending',
+    note TEXT,
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL
+  );
 `);
 
 // Seed the family on first run (matches the old mock users, plus Tide person colours)

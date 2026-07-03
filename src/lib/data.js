@@ -289,6 +289,39 @@ export async function getCalendarEvents({ date, days = 1 } = {}) {
   }
 }
 
+// ==================== CINEMA (Plex + film requests) ====================
+
+const MEDIA_BASE = `${import.meta.env.VITE_API_URL || ''}/api/media`
+
+async function mediaGet(path) {
+  try {
+    const res = await fetch(`${MEDIA_BASE}${path}`)
+    if (!res.ok) return []
+    return res.json()
+  } catch { return [] }
+}
+
+export const getContinueWatching = () => mediaGet('/cinema/on-deck')
+export const getRecentlyAdded = () => mediaGet('/cinema/recently-added')
+// Server-proxied Plex artwork (keeps the token server-side). Returns '' if no thumb.
+export function plexImage(thumb) {
+  if (!thumb) return ''
+  return `${MEDIA_BASE}/cinema/image?path=${encodeURIComponent(thumb)}`
+}
+
+export async function getFilmRequests() {
+  return safeList('/film-requests')
+}
+export async function addFilmRequest(req) {
+  return request('/film-requests', { method: 'POST', body: { title: req.title, requestedBy: req.requestedBy, note: req.note || null } })
+}
+export async function updateFilmRequest(id, updates) {
+  return request(`/film-requests/${id}`, { method: 'PATCH', body: updates })
+}
+export async function deleteFilmRequest(id) {
+  await request(`/film-requests/${id}`, { method: 'DELETE' })
+}
+
 // ==================== EARNINGS ====================
 
 // Get earnings: sum of unpaid approved completions per child

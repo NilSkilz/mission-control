@@ -239,4 +239,34 @@ router.post('/notes/:id/seen', (req, res) => {
   res.json(serveNote(note));
 });
 
+// ---- Film requests (cinema: kid asks -> parent approves; the 90% wrapped, Seerr for the 10%) ----
+
+router.get('/film-requests', (req, res) => {
+  const rows = list('filmRequests');
+  rows.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  res.json(rows);
+});
+
+router.post('/film-requests', (req, res) => {
+  const data = pick(req.body, ['title', 'requestedBy', 'note']);
+  if (!data.title || !data.requestedBy) return res.status(400).json({ error: 'title and requestedBy required' });
+  data.status = 'pending';
+  try {
+    res.status(201).json(create('filmRequests', data));
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.patch('/film-requests/:id', (req, res) => {
+  const row = update('filmRequests', req.params.id, pick(req.body, ['status', 'note', 'title']));
+  if (!row) return res.status(404).json({ error: 'not found' });
+  res.json(row);
+});
+
+router.delete('/film-requests/:id', (req, res) => {
+  if (!remove('filmRequests', req.params.id)) return res.status(404).json({ error: 'not found' });
+  res.status(204).end();
+});
+
 export default router;

@@ -111,4 +111,69 @@ router.get('/summary', async (req, res) => {
   res.json(payload)
 })
 
+// ---- Cinema: Plex on-deck (continue watching) + recently added ----
+
+const plexHeaders = { 'X-Plex-Token': process.env.PLEX_TOKEN, Accept: 'application/json' }
+
+function mapPlexItem(m) {
+  const isEpisode = m.type === 'episode'
+  return {
+    ratingKey: m.ratingKey,
+    type: m.type,
+    title: isEpisode ? m.grandparentTitle : m.title,
+    subtitle: isEpisode
+      ? `S${m.parentIndex}E${m.index} · ${m.title}`
+      : (m.year ? String(m.year) : ''),
+    progress: m.viewOffset && m.duration ? Math.min(1, m.viewOffset / m.duration) : 0,
+    thumb: m.type === 'episode' ? (m.grandparentThumb || m.thumb) : m.thumb,
+    art: m.art,
+    addedAt: m.addedAt,
+  }
+}
+
+router.get('/cinema/on-deck', async (req, res) => {
+  const cached = cache.get('onDeck')
+  if (cached) return res.json(cached)
+  try {
+    const { data } = await axios.get(`${PLEX_URL}/library/onDeck`, { timeout: TIMEOUT, headers: plexHeaders })
+    const items = (data.MediaContainer?.Metadata || []).map(mapPlexItem)
+    cache.set('onDeck', items)
+    res.json(items)
+  } catch (e) {
+    res.json([])
+  }
+})
+
+router.get('/cinema/recently-added', async (req, res) => {
+  const cached = cache.get('recent')
+  if (cached) return res.json(cached)
+  try {
+    const { data } = await axios.get(`${PLEX_URL}/library/recentlyAdded?X-Plex-Container-Size=18`, { timeout: TIMEOUT, headers: plexHeaders })
+    const items = (data.MediaContainer?.Metadata || [])
+      .filter((m) => m.type === 'movie' || m.type === 'season' || m.type === 'show')
+      .map(mapPlexItem).slice(0, 12)
+    cache.set('recent', items)
+    res.json(items)
+  } catch (e) {
+    res.json([])
+  }
+})
+
+// Proxy Plex artwork so the token never reaches the browser.
+router.get('/cinema/image', async (req, res) => {
+  const path = req.query.path
+  if (!path || !path.startsWith('/')) return res.status(400).end()
+  try {
+    const upstream = await axios.get(`${PLEX_URL}${path}`, {
+      timeout: TIMEOUT, responseType: 'arraybuffer',
+      headers: { 'X-Plex-Token': process.env.PLEX_TOKEN },
+    })
+    res.set('Content-Type', upstream.headers['content-type'] || 'image/jpeg')
+    res.set('Cache-Control', 'public, max-age=86400')
+    res.send(Buffer.from(upstream.data))
+  } catch (e) {
+    res.status(502).end()
+  }
+})
+
 export default router
