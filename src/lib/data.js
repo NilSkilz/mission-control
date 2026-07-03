@@ -273,6 +273,31 @@ export async function markNoteSeen(id, userId) {
   return request(`/notes/${id}/seen`, { method: 'POST', body: { userId } })
 }
 
+// ==================== HOME ASSISTANT (house screen) ====================
+
+const HA_BASE = `${import.meta.env.VITE_API_URL || ''}/api/ha`
+
+// Live states for a set of entity ids. Returns [] on any failure (HA offline).
+export async function haStates(entityIds = []) {
+  if (entityIds.length === 0) return []
+  try {
+    const res = await fetch(`${HA_BASE}/states?entities=${encodeURIComponent(entityIds.join(','))}`)
+    if (!res.ok) return []
+    const body = await res.json()
+    return body.states || body.data || (Array.isArray(body) ? body : [])
+  } catch { return [] }
+}
+
+export async function haCall(domain, service, entity_id, data = {}) {
+  const res = await fetch(`${HA_BASE}/service`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ domain, service, entity_id, data }),
+  })
+  if (!res.ok) throw new Error(`HA ${domain}.${service} failed`)
+  return res.json()
+}
+
 // ==================== CALENDAR ====================
 
 // Read-only family calendar from the published iCloud ICS (server-side).
