@@ -239,14 +239,73 @@ router.post('/notes/:id/seen', (req, res) => {
   res.json(serveNote(note));
 });
 
-// ---- Jarvis (family chat, grounded in the family's own data, scoped per person) ----
-// No LLM required: answers real questions deterministically from the store, and
-// routes kids' "can I..." asks to a parent note. If ANTHROPIC_API_KEY is ever set
-// this is where a freeform fallback would hook in.
+// ---- Jarvis (family chat) ----
+// Real conversation is powered by the Jarvis chat bridge (Rob's Claude Code
+// subscription, running on the jarvis LXC) when JARVIS_BRIDGE_URL is set.
+// Actions (add to shopping, kids' "can I..." -> parent note) are always handled
+// here deterministically since the bridge is text-only. If the bridge is
+// unreachable, we fall back to the grounded responder below.
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
+const firstNameOf = (u) => (u.displayName || '').split(' ')[0];
+const isKidRequest = (q) => /can i|could i|please can|may i|i want to|allowed to|are we allowed/.test(q);
 
-async function jarvisReply(user, text) {
+// Build a compact, current snapshot of family life for the LLM to ground on.
+async function buildContext(user) {
+  const isKid = user.role === 'child';
+  const lines = [`Today is ${new Date().toDateString()}.`];
+
+  const dinner = list('meals').find((m) => m.date === todayStr() && (m.mealType || '').toLowerCase() === 'dinner');
+  if (dinner) lines.push(`Dinner tonight: ${dinner.meal}.`);
+
+  try {
+    const evs = await getEvents({ url: process.env.CALENDAR_ICS_URL, startDate: todayStr(), days: 2 });
+    const byDay = { today: [], tomorrow: [] };
+    for (const e of evs) (e.date === todayStr() ? byDay.today : byDay.tomorrow).push(`${e.allDay ? 'all day' : e.time} ${e.summary}`);
+    if (byDay.today.length) lines.push(`Today's calendar: ${byDay.today.join('; ')}.`);
+    if (byDay.tomorrow.length) lines.push(`Tomorrow: ${byDay.tomorrow.join('; ')}.`);
+  } catch { /* calendar offline */ }
+
+  const completions = list('choreCompletions');
+  if (isKid) {
+    const mine = completions.filter((c) => c.userId === user.id);
+    const balance = mine.filter((c) => c.paidOut).reduce((s, c) => s + (c.amount || 0), 0);
+    const pending = mine.filter((c) => c.approved && !c.paidOut).reduce((s, c) => s + (c.amount || 0), 0);
+    const doneToday = new Set(mine.filter((c) => c.completedAt?.slice(0, 10) === todayStr()).map((c) => c.choreId));
+    const left = list('chores').filter((c) => c.assignedTo === user.id && !doneToday.has(c.id)).map((c) => c.title);
+    lines.push(`${firstNameOf(user)}'s wallet: £${balance.toFixed(2)}${pending ? ` (£${pending.toFixed(2)} awaiting Sunday payout)` : ''}.`);
+    lines.push(left.length ? `Chores left today: ${left.join(', ')}.` : `All chores done today.`);
+  } else {
+    const pendingApprovals = completions.filter((c) => c.approved === false && c.completedAt?.slice(0, 10) === todayStr()).length;
+    if (pendingApprovals) lines.push(`${pendingApprovals} chore(s) waiting for a parent to approve.`);
+  }
+
+  const notes = list('notes')
+    .filter((n) => (!n.expiresAt || n.expiresAt > new Date().toISOString()))
+    .filter((n) => !n.targetUserId || n.targetUserId === user.id || n.authorId === user.id)
+    .slice(-4).map((n) => n.body);
+  if (notes.length) lines.push(`Notice board: ${notes.map((b) => `"${b}"`).join('; ')}.`);
+
+  const shop = list('shoppingItems').filter((i) => !i.checked).map((i) => i.name);
+  if (shop.length) lines.push(`Shopping list: ${shop.join(', ')}.`);
+
+  return lines.join('\n');
+}
+
+async function callBridge(user, message, context) {
+  const url = process.env.JARVIS_BRIDGE_URL;
+  if (!url) return null;
+  const res = await fetch(`${url.replace(/\/$/, '')}/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Bridge-Token': process.env.JARVIS_BRIDGE_TOKEN || '' },
+    body: JSON.stringify({ name: firstNameOf(user), role: user.role, context, message }),
+    signal: AbortSignal.timeout(95_000),
+  });
+  if (!res.ok) throw new Error(`bridge ${res.status}`);
+  return (await res.json()).reply;
+}
+
+async function groundedReply(user, text) {
   const q = (text || '').toLowerCase().trim();
   const isKid = user.role === 'child';
   const name = (user.displayName || '').split(' ')[0];
@@ -294,9 +353,8 @@ async function jarvisReply(user, text) {
     return { reply: left.length ? `You've got ${left.length} chore${left.length > 1 ? 's' : ''} left today: ${left.map((c) => c.title).join(', ')}.` : `All your chores are done — nice one. 🎉` };
   }
 
-  // kid requests: "can I ..." -> parent note
-  if (isKid && ask(/can i|could i|please can|may i|i want to|allowed to/)) {
-    create('notes', { authorId: user.id, body: `${name} asks: "${text.trim()}"`, targetUserId: null, pinned: 0 });
+  // kid requests: "can I ..." (the note is created in the route, not here)
+  if (isKid && isKidRequest(q)) {
     return { reply: `I've passed that to Mum and Dad to say yes or no. 🙏` };
   }
 
@@ -317,9 +375,31 @@ router.post('/jarvis', async (req, res) => {
   const user = userId && get('users', userId);
   if (!user) return res.status(400).json({ error: 'unknown user' });
   if (!message || !message.trim()) return res.status(400).json({ error: 'message required' });
+  const at = new Date().toISOString();
+  const q = message.toLowerCase().trim();
+
   try {
-    const result = await jarvisReply(user, message);
-    res.json({ ...result, at: new Date().toISOString() });
+    // ACTION: add to shopping — reliable, done here (the bridge is text-only)
+    const addMatch = q.match(/(?:add|put)\s+(.+?)\s+(?:to|on|onto)\s+(?:the\s+)?(?:shopping|list|shop)/);
+    if (addMatch && addMatch[1]) {
+      const item = addMatch[1].trim();
+      create('shoppingItems', { name: item, quantity: 1, addedBy: user.id, checked: false });
+      return res.json({ reply: `Done — added **${item}** to the shopping list.`, at });
+    }
+
+    // ACTION: a kid asking permission always gets logged as a note for the parents
+    if (user.role === 'child' && isKidRequest(q)) {
+      create('notes', { authorId: user.id, body: `${firstNameOf(user)} asks: "${message.trim()}"`, targetUserId: null, pinned: 0 });
+    }
+
+    // Conversation: real reply via the bridge (Rob's Claude), grounded fallback otherwise
+    try {
+      const reply = await callBridge(user, message, await buildContext(user));
+      if (reply) return res.json({ reply, at, via: 'jarvis' });
+    } catch { /* bridge down -> fall through to grounded */ }
+
+    const result = await groundedReply(user, message);
+    res.json({ ...result, at, via: 'grounded' });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
