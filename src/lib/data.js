@@ -271,6 +271,22 @@ export async function markNoteSeen(id, userId) {
   return request(`/notes/${id}/seen`, { method: 'POST', body: { userId } })
 }
 
+// ==================== CALENDAR ====================
+
+// Read-only family calendar from the published iCloud ICS (server-side).
+// Returns { events, configured }. events: [{date,time,allDay,summary,location,person,sortKey}]
+export async function getCalendarEvents({ date, days = 1 } = {}) {
+  const params = new URLSearchParams()
+  if (date) params.set('date', date)
+  if (days) params.set('days', String(days))
+  try {
+    return await request(`/calendar?${params.toString()}`)
+  } catch (e) {
+    console.warn('GET /calendar failed:', e.message)
+    return { events: [], configured: false }
+  }
+}
+
 // ==================== EARNINGS ====================
 
 // Get earnings: sum of unpaid approved completions per child

@@ -3,6 +3,7 @@ import { UserProvider, useUser } from './context/UserContext'
 import { TideThemeProvider } from './tide/TideThemeProvider'
 import TideShell from './tide/TideShell'
 import TidePlaceholder from './tide/TidePlaceholder'
+import TideHome from './tide/TideHome'
 import SystemFrame from './tide/SystemFrame'
 import LoginScreen from './components/LoginScreen'
 
@@ -70,7 +71,7 @@ function AppRoutes() {
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginScreen />} />
 
       {/* family (Tide) */}
-      <Route path="/" element={<Family><TidePlaceholder title="home" note="The family home screen — Today rail with the NOW line, chores ring, mum-says and dinner — lands in card 3. The shell, theme and sun-clock you're looking at now are card 2." /></Family>} />
+      <Route path="/" element={<Family><TideHome /></Family>} />
       <Route path="/chores" element={<Family><ChoresPage /></Family>} />
       <Route path="/calendar" element={<Family><CalendarPage /></Family>} />
       <Route path="/meals" element={<Family><MealsPage /></Family>} />

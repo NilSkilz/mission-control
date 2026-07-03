@@ -2,8 +2,24 @@
 // Response shapes match the old Amplify models so the frontend data layer maps 1:1.
 import express from 'express';
 import db, { list, get, create, update, remove } from '../lib/familyDb.js';
+import { getEvents } from '../lib/icsCalendar.js';
 
 const router = express.Router();
+
+// ==================== CALENDAR (read-only, from published iCloud ICS) ====================
+// GET /api/family/calendar?date=YYYY-MM-DD&days=N  (defaults: today, 1 day)
+router.get('/calendar', async (req, res) => {
+  const url = process.env.CALENDAR_ICS_URL;
+  if (!url) return res.json({ events: [], configured: false });
+  const startDate = req.query.date || new Date().toISOString().slice(0, 10);
+  const days = Math.min(Math.max(parseInt(req.query.days || '1', 10) || 1, 1), 31);
+  try {
+    const events = await getEvents({ url, startDate, days });
+    res.json({ events, configured: true });
+  } catch (e) {
+    res.status(502).json({ events: [], configured: true, error: e.message });
+  }
+});
 
 function crud(resource, table, { creatable, updatable }) {
   router.get(`/${resource}`, (req, res) => res.json(list(table)));

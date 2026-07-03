@@ -280,6 +280,18 @@
 .tide-tabbar a.on { color: var(--tide-nav-on); }
 .tide-tabbar a.on svg { stroke: url(#tideTabGrad); }
 
+/* home three-column rhythm (mock: 1.35fr / 1fr / 1fr), stacks on phone */
+.tide-home-grid {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr 1fr;
+  gap: 14px;
+  margin-top: 20px;
+  align-items: start;
+}
+@media (max-width: 820px) {
+  .tide-home-grid { grid-template-columns: 1fr; }
+}
+
 /* responsive: swap desktop nav for the mobile tab bar */
 .tide-nav-mobile { display: none; }
 @media (max-width: 720px) {
