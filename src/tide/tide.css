@@ -302,6 +302,14 @@
 @media (max-width: 900px) { .tide-week { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 480px) { .tide-week { grid-template-columns: 1fr; } }
 
+/* recipe book grid */
+.tide-recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
 /* responsive: swap desktop nav for the mobile tab bar */
 .tide-nav-mobile { display: none; }
 @media (max-width: 720px) {
