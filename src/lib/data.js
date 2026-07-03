@@ -273,6 +273,12 @@ export async function markNoteSeen(id, userId) {
   return request(`/notes/${id}/seen`, { method: 'POST', body: { userId } })
 }
 
+// ==================== JARVIS CHAT ====================
+
+export async function askJarvis(userId, message) {
+  return request('/jarvis', { method: 'POST', body: { userId, message } })
+}
+
 // ==================== HOME ASSISTANT (house screen) ====================
 
 const HA_BASE = `${import.meta.env.VITE_API_URL || ''}/api/ha`

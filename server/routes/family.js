@@ -239,6 +239,92 @@ router.post('/notes/:id/seen', (req, res) => {
   res.json(serveNote(note));
 });
 
+// ---- Jarvis (family chat, grounded in the family's own data, scoped per person) ----
+// No LLM required: answers real questions deterministically from the store, and
+// routes kids' "can I..." asks to a parent note. If ANTHROPIC_API_KEY is ever set
+// this is where a freeform fallback would hook in.
+
+const todayStr = () => new Date().toISOString().slice(0, 10);
+
+async function jarvisReply(user, text) {
+  const q = (text || '').toLowerCase().trim();
+  const isKid = user.role === 'child';
+  const name = (user.displayName || '').split(' ')[0];
+
+  const ask = (re) => re.test(q);
+
+  // add to shopping: "add milk to shopping" / "add milk to the list"
+  const addMatch = q.match(/add (.+?)(?: to (?:the )?(?:shopping|list|shop))?$/);
+  if (ask(/\b(add|need|buy|get)\b/) && ask(/shop|list|milk|bread|need|buy/) && addMatch) {
+    const item = addMatch[1].replace(/\b(to|the|shopping|list|shop)\b/g, '').trim();
+    if (item) {
+      create('shoppingItems', { name: item, quantity: 1, addedBy: user.id, checked: false });
+      return { reply: `Done — added **${item}** to the shopping list.` };
+    }
+  }
+
+  // dinner / food tonight
+  if (ask(/dinner|tea|eat|food|cook|what'?s for/)) {
+    const m = list('meals').find((x) => x.date === todayStr() && (x.mealType || '').toLowerCase() === 'dinner');
+    return { reply: m ? `Dinner tonight is **${m.meal}** 🍽️` : `No dinner's planned yet. Someone can pick one on the meals page.` };
+  }
+
+  // tomorrow / today's calendar
+  if (ask(/tomorrow|what'?s on|calendar|schedule|plan|happening/)) {
+    const wantsTomorrow = ask(/tomorrow/);
+    const start = wantsTomorrow ? new Date(Date.now() + 86400000).toISOString().slice(0, 10) : todayStr();
+    let events = [];
+    try { events = await getEvents({ url: process.env.CALENDAR_ICS_URL, startDate: start, days: 1 }); } catch { /* offline */ }
+    if (events.length === 0) return { reply: `Nothing on the calendar ${wantsTomorrow ? 'tomorrow' : 'today'}.` };
+    const lines = events.map((e) => `• ${e.allDay ? 'all day' : e.time} — ${e.summary}`).join('\n');
+    return { reply: `${wantsTomorrow ? 'Tomorrow' : 'Today'}:\n${lines}` };
+  }
+
+  // chores / wallet
+  if (ask(/chore|job|task|wallet|money|pocket|earn/)) {
+    const completions = list('choreCompletions').filter((c) => c.userId === user.id);
+    const balance = completions.filter((c) => c.paidOut).reduce((s, c) => s + (c.amount || 0), 0);
+    const pending = completions.filter((c) => c.approved && !c.paidOut).reduce((s, c) => s + (c.amount || 0), 0);
+    if (ask(/wallet|money|pocket|earn/)) {
+      return { reply: `Your wallet is **£${balance.toFixed(2)}**${pending > 0 ? `, with £${pending.toFixed(2)} approved and waiting for Sunday's payout.` : '.'}` };
+    }
+    const mine = list('chores').filter((c) => c.assignedTo === user.id);
+    const doneIds = new Set(completions.filter((c) => c.completedAt?.slice(0, 10) === todayStr()).map((c) => c.choreId));
+    const left = mine.filter((c) => !doneIds.has(c.id));
+    return { reply: left.length ? `You've got ${left.length} chore${left.length > 1 ? 's' : ''} left today: ${left.map((c) => c.title).join(', ')}.` : `All your chores are done — nice one. 🎉` };
+  }
+
+  // kid requests: "can I ..." -> parent note
+  if (isKid && ask(/can i|could i|please can|may i|i want to|allowed to/)) {
+    create('notes', { authorId: user.id, body: `${name} asks: "${text.trim()}"`, targetUserId: null, pinned: 0 });
+    return { reply: `I've passed that to Mum and Dad to say yes or no. 🙏` };
+  }
+
+  // shopping view
+  if (ask(/shopping|shop|list/)) {
+    const items = list('shoppingItems').filter((i) => !i.checked);
+    return { reply: items.length ? `On the shopping list: ${items.map((i) => i.name).join(', ')}.` : `The shopping list is empty right now.` };
+  }
+
+  // help / greeting
+  return {
+    reply: `Hi ${name}! I know the family's calendar, chores, meals and shopping. Try "what's for dinner?", "my chores", "what's on tomorrow?"${isKid ? ', or ask me for something and I\'ll check with a grown-up.' : ', or "add milk to the shopping".'}`,
+  };
+}
+
+router.post('/jarvis', async (req, res) => {
+  const { userId, message } = req.body;
+  const user = userId && get('users', userId);
+  if (!user) return res.status(400).json({ error: 'unknown user' });
+  if (!message || !message.trim()) return res.status(400).json({ error: 'message required' });
+  try {
+    const result = await jarvisReply(user, message);
+    res.json({ ...result, at: new Date().toISOString() });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ---- Film requests (cinema: kid asks -> parent approves; the 90% wrapped, Seerr for the 10%) ----
 
 router.get('/film-requests', (req, res) => {

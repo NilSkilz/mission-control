@@ -2,11 +2,11 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { UserProvider, useUser } from './context/UserContext'
 import { TideThemeProvider } from './tide/TideThemeProvider'
 import TideShell from './tide/TideShell'
-import TidePlaceholder from './tide/TidePlaceholder'
 import TideHome from './tide/TideHome'
 import TideNotes from './tide/TideNotes'
 import TideCinema from './tide/TideCinema'
 import TideHouse from './tide/TideHouse'
+import TideJarvis from './tide/TideJarvis'
 import SystemFrame from './tide/SystemFrame'
 import LoginScreen from './components/LoginScreen'
 
@@ -83,7 +83,7 @@ function AppRoutes() {
       <Route path="/notes" element={<Family><TideNotes /></Family>} />
       <Route path="/cinema" element={<Family><TideCinema /></Family>} />
       <Route path="/house" element={<Family><TideHouse /></Family>} />
-      <Route path="/jarvis" element={<Family><TidePlaceholder title="jarvis" note="Family chat with me, scoped per person. Wired through the existing bridge. Built last, card 10." /></Family>} />
+      <Route path="/jarvis" element={<Family><TideJarvis /></Family>} />
 
       {/* system (legacy sci-fi, parent-only) */}
       <Route path="/system" element={<System><SimpleDemo /></System>} />
