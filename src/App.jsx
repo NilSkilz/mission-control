@@ -1,164 +1,108 @@
-import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { UserProvider, useUser } from './context/UserContext'
-import { ArrowLeftIcon } from '@radix-ui/react-icons'
+import { TideThemeProvider } from './tide/TideThemeProvider'
+import TideShell from './tide/TideShell'
+import TidePlaceholder from './tide/TidePlaceholder'
+import SystemFrame from './tide/SystemFrame'
 import LoginScreen from './components/LoginScreen'
-import Layout from './components/Layout'
-import Homepage from './pages/Homepage'
+
+// Family screens (Tide)
 import ChoresPage from './pages/Chores'
 import MealsPage from './pages/Meals'
 import MealsManagerPage from './pages/MealsManager'
 import ShoppingPage from './pages/Shopping'
 import CalendarPage from './pages/Calendar'
-import DocumentsPage from './pages/Documents'
+
+// Legacy sci-fi / system screens (kept unchanged, moved under /system)
+import SimpleDemo from './pages/SimpleDemo'
 import AgentsPage from './pages/Agents'
 import SystemAdminPage from './pages/SystemAdmin'
-import OrbitalDemo from './pages/OrbitalDemo'
-import SimpleDemo from './pages/SimpleDemo'
-import SeasonalDemo from './pages/SeasonalDemo'
+import DocumentsPage from './pages/Documents'
 import TimelinePage from './pages/Timeline'
 import VideosPage from './pages/Videos'
+import OrbitalDemo from './pages/OrbitalDemo'
+import SeasonalDemo from './pages/SeasonalDemo'
 
-function BackToHome({ children }) {
+function Loading() {
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-30 bg-slate-800/80 backdrop-blur-sm border-b border-slate-700">
-        <div className="max-w-5xl mx-auto px-4 py-3">
-          <Link to="/" className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm">
-            <ArrowLeftIcon className="w-4 h-4" />
-            Back to Home
-          </Link>
-        </div>
-      </header>
-      <main className="max-w-5xl mx-auto px-4 py-6">
-        {children}
-      </main>
+    <div className="tide-shell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="tide-glow" />
+      <div className="tide-content tide-grad" style={{ fontWeight: 800, fontSize: 20 }}>
+        stokeshq…
+      </div>
     </div>
   )
 }
 
 function ProtectedRoute({ children, requireParent = false }) {
   const { user, loading } = useUser()
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-teal-400 text-xl">Loading...</div>
-      </div>
-    )
-  }
-  
-  if (!user) {
-    return <Navigate to="/family/login" replace />
-  }
-  
-  if (requireParent && user.role !== 'parent') {
-    return <Navigate to="/family/chores" replace />
-  }
-  
+  if (loading) return <Loading />
+  if (!user) return <Navigate to="/login" replace />
+  if (requireParent && user.role !== 'parent') return <Navigate to="/" replace />
   return children
+}
+
+// A family screen inside the Tide shell, behind auth.
+function Family({ children, requireParent = false }) {
+  return (
+    <ProtectedRoute requireParent={requireParent}>
+      <TideShell>{children}</TideShell>
+    </ProtectedRoute>
+  )
+}
+
+// A legacy system screen, parent-only, wrapped in the slim system bar.
+function System({ children }) {
+  return (
+    <ProtectedRoute requireParent>
+      <SystemFrame>{children}</SystemFrame>
+    </ProtectedRoute>
+  )
 }
 
 function AppRoutes() {
   const { user, loading } = useUser()
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-teal-400 text-xl">Loading...</div>
-      </div>
-    )
-  }
-  
+  if (loading) return <Loading />
+
   return (
     <Routes>
-      {/* Public homepage - no auth required */}
-      <Route path="/" element={<SimpleDemo />} />
-      
-      {/* Sci-fi orbital demo - public route for showcase */}
-      <Route path="/orbital-demo" element={<OrbitalDemo />} />
-      
-      {/* Seasonal awareness demo - public route for showcase */}
-      <Route path="/seasonal-demo" element={<SeasonalDemo />} />
-      
-      {/* Family dashboard - moved from root */}
-      <Route path="/family" element={<Homepage />} />
-      
-      {/* Family app routes - auth required */}
-      <Route path="/family/login" element={user ? <Navigate to="/family/chores" replace /> : <LoginScreen />} />
-      <Route path="/family/chores" element={
-        <ProtectedRoute>
-          <BackToHome>
-            <ChoresPage />
-          </BackToHome>
-        </ProtectedRoute>
-      } />
-      <Route path="/family/meals" element={
-        <ProtectedRoute requireParent>
-          <BackToHome>
-            <MealsPage />
-          </BackToHome>
-        </ProtectedRoute>
-      } />
-      <Route path="/meals/manage" element={
-        <ProtectedRoute requireParent>
-          <BackToHome>
-            <MealsManagerPage />
-          </BackToHome>
-        </ProtectedRoute>
-      } />
-      <Route path="/family/shopping" element={
-        <ProtectedRoute requireParent>
-          <BackToHome>
-            <ShoppingPage />
-          </BackToHome>
-        </ProtectedRoute>
-      } />
-      <Route path="/family/calendar" element={
-        <ProtectedRoute>
-          <Layout>
-            <CalendarPage />
-          </Layout>
-        </ProtectedRoute>
-      } />
+      {/* auth */}
+      <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginScreen />} />
 
-      <Route path="/documents" element={
-        <Layout>
-          <DocumentsPage />
-        </Layout>
-      } />
+      {/* family (Tide) */}
+      <Route path="/" element={<Family><TidePlaceholder title="home" note="The family home screen — Today rail with the NOW line, chores ring, mum-says and dinner — lands in card 3. The shell, theme and sun-clock you're looking at now are card 2." /></Family>} />
+      <Route path="/chores" element={<Family><ChoresPage /></Family>} />
+      <Route path="/calendar" element={<Family><CalendarPage /></Family>} />
+      <Route path="/meals" element={<Family><MealsPage /></Family>} />
+      <Route path="/meals/manage" element={<Family requireParent><MealsManagerPage /></Family>} />
+      <Route path="/shopping" element={<Family><ShoppingPage /></Family>} />
+      <Route path="/notes" element={<Family><TidePlaceholder title="notes" note="Aimee's superpower: notes targeted at a person or everyone, pinned or set to expire, with seen-by receipts. Card 5." /></Family>} />
+      <Route path="/jarvis" element={<Family><TidePlaceholder title="jarvis" note="Family chat with me, scoped per person. Wired through the existing bridge. Built last, card 10." /></Family>} />
 
-      <Route path="/agents" element={
-        <Layout>
-          <AgentsPage />
-        </Layout>
-      } />
+      {/* system (legacy sci-fi, parent-only) */}
+      <Route path="/system" element={<System><SimpleDemo /></System>} />
+      <Route path="/system/agents" element={<System><AgentsPage /></System>} />
+      <Route path="/system/admin" element={<System><SystemAdminPage /></System>} />
+      <Route path="/system/documents" element={<System><DocumentsPage /></System>} />
+      <Route path="/system/timeline" element={<System><TimelinePage /></System>} />
+      <Route path="/system/videos" element={<System><VideosPage /></System>} />
+      <Route path="/system/orbital" element={<System><OrbitalDemo /></System>} />
+      <Route path="/system/seasonal" element={<System><SeasonalDemo /></System>} />
 
-      <Route path="/timeline" element={
-        <TimelinePage />
-      } />
+      {/* legacy redirects */}
+      <Route path="/family" element={<Navigate to="/" replace />} />
+      <Route path="/family/login" element={<Navigate to="/login" replace />} />
+      <Route path="/family/chores" element={<Navigate to="/chores" replace />} />
+      <Route path="/family/meals" element={<Navigate to="/meals" replace />} />
+      <Route path="/family/shopping" element={<Navigate to="/shopping" replace />} />
+      <Route path="/family/calendar" element={<Navigate to="/calendar" replace />} />
+      <Route path="/agents" element={<Navigate to="/system/agents" replace />} />
+      <Route path="/admin" element={<Navigate to="/system/admin" replace />} />
+      <Route path="/documents" element={<Navigate to="/system/documents" replace />} />
+      <Route path="/timeline" element={<Navigate to="/system/timeline" replace />} />
+      <Route path="/videos" element={<Navigate to="/system/videos" replace />} />
+      <Route path="/login-legacy" element={<Navigate to="/login" replace />} />
 
-      <Route path="/admin" element={
-        <ProtectedRoute requireParent>
-          <Layout>
-            <SystemAdminPage />
-          </Layout>
-        </ProtectedRoute>
-      } />
-
-      <Route path="/videos" element={
-        <ProtectedRoute requireParent>
-          <BackToHome>
-            <VideosPage />
-          </BackToHome>
-        </ProtectedRoute>
-      } />
-      
-      {/* Legacy redirects */}
-      <Route path="/login" element={<Navigate to="/family/login" replace />} />
-      <Route path="/meals" element={<Navigate to="/family/meals" replace />} />
-      <Route path="/shopping" element={<Navigate to="/family/shopping" replace />} />
-      <Route path="/calendar" element={<Navigate to="/family/calendar" replace />} />
-      
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
@@ -168,7 +112,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <UserProvider>
-        <AppRoutes />
+        <TideThemeProvider>
+          <AppRoutes />
+        </TideThemeProvider>
       </UserProvider>
     </BrowserRouter>
   )

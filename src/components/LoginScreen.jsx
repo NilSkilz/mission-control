@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '../context/UserContext'
-import { UserAvatar, Button, Input, Card } from './ui'
+import { personColor, initial, firstName } from '../tide/people'
 
 export default function LoginScreen() {
   const { users, login } = useUser()
@@ -20,88 +20,100 @@ export default function LoginScreen() {
   const handleLogin = async (e) => {
     e.preventDefault()
     if (!selectedUser || !password) return
-    
     setLoading(true)
     setError('')
-    
     try {
       await login(selectedUser.username, password)
       navigate('/')
     } catch (err) {
-      setError(err.message || 'Login failed')
+      setError(err.message || 'login failed')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleBack = () => {
-    setSelectedUser(null)
-    setPassword('')
-    setError('')
-  }
-
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6">
-      <div className="text-center mb-12">
-        <span className="text-6xl mb-4 block">🚀</span>
-        <h1 className="text-4xl font-bold text-white mb-2">Mission Control</h1>
-        <p className="text-slate-400">
-          {selectedUser ? `Welcome back, ${selectedUser.display_name}!` : 'Who are you?'}
-        </p>
-      </div>
-
-      {!selectedUser ? (
-        // User selection grid
-        <div className="grid grid-cols-2 gap-4 w-full max-w-md">
-          {users.map(u => (
-            <button
-              key={u.id}
-              onClick={() => handleSelectUser(u)}
-              className="p-6 bg-slate-800 border border-slate-700 rounded-xl hover:border-teal-500 hover:bg-slate-800/80 transition-all group"
-            >
-              <UserAvatar user={u} size="lg" />
-              <span className="block mt-3 text-lg font-medium text-white group-hover:text-teal-400 transition-colors">
-                {u.display_name}
-              </span>
-              <span className="text-xs text-slate-500 capitalize">{u.role}</span>
-            </button>
-          ))}
+    <div className="tide-shell" style={{ display: 'flex', flexDirection: 'column' }}>
+      <div className="tide-glow" />
+      <div
+        className="tide-content"
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+      >
+        <div style={{ textAlign: 'center', marginBottom: 36 }}>
+          <div className="tide-logo" style={{ fontSize: 26 }}>
+            stokes<span className="tide-grad">hq</span>
+          </div>
+          <p className="tide-sub" style={{ marginTop: 10, fontSize: 15 }}>
+            {selectedUser ? `hi ${firstName(selectedUser).toLowerCase()}` : "who's home?"}
+          </p>
         </div>
-      ) : (
-        // Password entry
-        <Card className="w-full max-w-sm">
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="text-center mb-4">
-              <UserAvatar user={selectedUser} size="lg" />
-              <p className="mt-2 text-white font-medium">{selectedUser.display_name}</p>
-            </div>
 
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">Password</label>
-              <Input
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoFocus
-              />
+        {!selectedUser ? (
+          <div
+            style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14, width: '100%', maxWidth: 380 }}
+          >
+            {users.map((u) => (
+              <button
+                key={u.id}
+                onClick={() => handleSelectUser(u)}
+                className="tide-card"
+                style={{ padding: '22px 14px', cursor: 'pointer', textAlign: 'center', border: '1px solid var(--tide-card-border)' }}
+              >
+                <span
+                  className="tide-avatar"
+                  style={{ width: 54, height: 54, background: personColor(u), fontSize: 22, margin: '0 auto' }}
+                >
+                  {initial(u)}
+                </span>
+                <span style={{ display: 'block', marginTop: 12, fontSize: 16, fontWeight: 700 }}>
+                  {firstName(u).toLowerCase()}
+                </span>
+                <span className="tide-sub" style={{ fontSize: 11 }}>{u.role}</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <form onSubmit={handleLogin} className="tide-card" style={{ width: '100%', maxWidth: 320, padding: 20 }}>
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <span
+                className="tide-avatar"
+                style={{ width: 54, height: 54, background: personColor(selectedUser), fontSize: 22, margin: '0 auto' }}
+              >
+                {initial(selectedUser)}
+              </span>
             </div>
-
+            <input
+              type="password"
+              className="tide-input"
+              placeholder="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoFocus
+            />
             {error && (
-              <p className="text-red-400 text-sm text-center">{error}</p>
+              <p style={{ color: '#e06a6a', fontSize: 13, textAlign: 'center', marginTop: 10 }}>{error}</p>
             )}
-
-            <div className="flex gap-2 pt-2">
-              <Button type="button" variant="secondary" onClick={handleBack} className="flex-1">
-                Back
-              </Button>
-              <Button type="submit" disabled={!password || loading} className="flex-1">
-                {loading ? 'Logging in...' : 'Login'}
-              </Button>
+            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <button
+                type="button"
+                className="tide-btn tide-btn-ghost"
+                onClick={() => setSelectedUser(null)}
+                style={{ flex: 1, padding: '11px 0' }}
+              >
+                back
+              </button>
+              <button
+                type="submit"
+                className="tide-btn tide-btn-primary"
+                disabled={!password || loading}
+                style={{ flex: 1, padding: '11px 0' }}
+              >
+                {loading ? '…' : 'go'}
+              </button>
             </div>
           </form>
-        </Card>
-      )}
+        )}
+      </div>
     </div>
   )
 }
