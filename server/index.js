@@ -39,6 +39,18 @@ app.get('/health', (req, res) => {
 
 // Import and register routes with error handling
 async function setupRoutes() {
+  // Auth first: /api/auth is public (login), then everything else under /api
+  // requires a valid bearer token.
+  try {
+    const authModule = await import('./routes/auth.js');
+    const { authGuard } = await import('./lib/auth.js');
+    app.use('/api/auth', authModule.default);
+    app.use('/api', authGuard);
+    console.log('✓ Auth routes loaded + API guarded');
+  } catch (e) {
+    console.error('✗ Failed to load auth/guard:', e.message);
+  }
+
   try {
     const haModule = await import('./routes/homeAssistant.js');
     app.use('/api/ha', haModule.homeAssistantRoutes);

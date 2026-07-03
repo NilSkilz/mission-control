@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
+import { hashPassword } from './auth.js';
 
 const DEFAULT_PATH = path.join(
   path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'db', 'family.sqlite'
@@ -158,6 +159,19 @@ for (const [col, def] of [['targetUserId', 'TEXT'], ['pinned', 'INTEGER NOT NULL
   if (!has) db.exec(`ALTER TABLE notes ADD COLUMN ${col} ${def}`);
 }
 
+// Add passwordHash for real server-side auth (was a client-side hardcoded map).
+if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'passwordHash')) {
+  db.exec('ALTER TABLE users ADD COLUMN passwordHash TEXT');
+}
+// Backfill hashes for anyone missing one, from the known starter passwords.
+// These are the family's existing logins; they can be changed later.
+const STARTER_PASSWORDS = { rob: 'family123', aimee: 'family123', dexter: 'dexter1', logan: 'logan1' };
+for (const u of db.prepare('SELECT id, username, passwordHash FROM users').all()) {
+  if (!u.passwordHash && STARTER_PASSWORDS[u.username]) {
+    db.prepare('UPDATE users SET passwordHash = ? WHERE id = ?').run(hashPassword(STARTER_PASSWORDS[u.username]), u.id);
+  }
+}
+
 const BOOL_COLUMNS = {
   choreTemplates: ['paid'],
   chores: ['paid'],
@@ -182,6 +196,8 @@ function fromRow(table, row) {
   for (const col of BOOL_COLUMNS[table] || []) {
     if (col in out) out[col] = !!out[col];
   }
+  // Never leak the password hash through the generic get/list helpers.
+  if (table === 'users') delete out.passwordHash;
   return out;
 }
 

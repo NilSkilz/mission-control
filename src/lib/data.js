@@ -4,12 +4,36 @@
 
 const API_BASE = `${import.meta.env.VITE_API_URL || ''}/api/family`
 
+// ---- auth token (real server-side auth) ----
+const TOKEN_KEY = 'mission-control-token'
+let authToken = localStorage.getItem(TOKEN_KEY) || null
+
+export function setAuthToken(token) {
+  authToken = token
+  if (token) localStorage.setItem(TOKEN_KEY, token)
+  else localStorage.removeItem(TOKEN_KEY)
+}
+export function getAuthToken() { return authToken }
+
+export function authHeaders(extra = {}) {
+  return authToken ? { ...extra, Authorization: `Bearer ${authToken}` } : extra
+}
+
+// A 401 means the token is missing/expired: drop it and bounce to login.
+function handleUnauthorized() {
+  setAuthToken(null)
+  if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+    window.location.href = '/login'
+  }
+}
+
 async function request(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     ...options,
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
   })
+  if (res.status === 401) { handleUnauthorized(); throw new Error('not authenticated') }
   if (!res.ok) {
     let message = `HTTP ${res.status}`
     try {
@@ -29,6 +53,59 @@ async function safeList(path) {
     console.warn(`GET ${path} failed:`, e.message)
     return []
   }
+}
+
+// ==================== AUTH ====================
+
+const AUTH_BASE = `${import.meta.env.VITE_API_URL || ''}/api/auth`
+
+// Public: the login picker needs names/colours before anyone is authenticated.
+export async function getPublicUsers() {
+  try {
+    const res = await fetch(`${AUTH_BASE}/users`)
+    if (!res.ok) return []
+    return res.json()
+  } catch { return [] }
+}
+
+export async function loginRequest(username, password) {
+  const res = await fetch(`${AUTH_BASE}/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  })
+  if (!res.ok) {
+    let message = 'login failed'
+    try { message = (await res.json()).error || message } catch { /* ignore */ }
+    throw new Error(message)
+  }
+  const { token, user } = await res.json()
+  setAuthToken(token)
+  return user
+}
+
+// Restore a session from a stored token; null if it's missing/expired.
+export async function fetchMe() {
+  if (!authToken) return null
+  try {
+    const res = await fetch(`${AUTH_BASE}/me`, { headers: authHeaders() })
+    if (!res.ok) { setAuthToken(null); return null }
+    return (await res.json()).user
+  } catch { return null }
+}
+
+export async function changePassword(userId, currentPassword, newPassword) {
+  const res = await fetch(`${AUTH_BASE}/change-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, currentPassword, newPassword }),
+  })
+  if (!res.ok) {
+    let message = 'could not change password'
+    try { message = (await res.json()).error || message } catch { /* ignore */ }
+    throw new Error(message)
+  }
+  return true
 }
 
 // ==================== USERS ====================
@@ -287,7 +364,7 @@ const HA_BASE = `${import.meta.env.VITE_API_URL || ''}/api/ha`
 export async function haStates(entityIds = []) {
   if (entityIds.length === 0) return []
   try {
-    const res = await fetch(`${HA_BASE}/states?entities=${encodeURIComponent(entityIds.join(','))}`)
+    const res = await fetch(`${HA_BASE}/states?entities=${encodeURIComponent(entityIds.join(','))}`, { headers: authHeaders() })
     if (!res.ok) return []
     const body = await res.json()
     return body.states || body.data || (Array.isArray(body) ? body : [])
@@ -297,7 +374,7 @@ export async function haStates(entityIds = []) {
 export async function haCall(domain, service, entity_id, data = {}) {
   const res = await fetch(`${HA_BASE}/service`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ domain, service, entity_id, data }),
   })
   if (!res.ok) throw new Error(`HA ${domain}.${service} failed`)
@@ -326,7 +403,7 @@ const MEDIA_BASE = `${import.meta.env.VITE_API_URL || ''}/api/media`
 
 async function mediaGet(path) {
   try {
-    const res = await fetch(`${MEDIA_BASE}${path}`)
+    const res = await fetch(`${MEDIA_BASE}${path}`, { headers: authHeaders() })
     if (!res.ok) return []
     return res.json()
   } catch { return [] }
