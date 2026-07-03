@@ -3,6 +3,9 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { getHAWebSocketManager } from './websocket/haWebSocket.js';
 
 dotenv.config();
@@ -126,8 +129,21 @@ async function setupRoutes() {
   }
 }
 
+// Serve the built frontend (dist/) when present, so production runs on one port
+function setupStaticFrontend() {
+  const distDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist');
+  if (!fs.existsSync(distDir)) return;
+  app.use(express.static(distDir));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path === '/health' || req.path === '/ws') return next();
+    res.sendFile(path.join(distDir, 'index.html'));
+  });
+  console.log('✓ Serving frontend from dist/');
+}
+
 // Start server
 setupRoutes().then(() => {
+  setupStaticFrontend();
   server.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📡 WebSocket available at ws://localhost:${PORT}/ws`);

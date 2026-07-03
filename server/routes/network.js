@@ -8,7 +8,7 @@ const router = express.Router()
 class UbiquitiClient {
   constructor() {
     this.baseURL = 'https://192.168.1.1'
-    this.apiKey = process.env.UBIQUITI_API_KEY || 'U2lKqkabMmCavoYXZvqTsB1nc42-UKll'
+    this.apiKey = process.env.UBIQUITI_API_KEY
     
     // Create axios instance that ignores SSL cert issues (common with UDM)
     this.client = axios.create({

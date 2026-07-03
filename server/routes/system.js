@@ -11,23 +11,33 @@ const router = express.Router()
 // GET /api/system/status - Status of non-HA services
 router.get('/status', async (req, res) => {
   try {
+    // Post-Proxmox-rebuild layout (July 2026): each service is its own LXC
+    const HOSTS = {
+      plex: process.env.PLEX_URL || 'http://192.168.1.3:32400',
+      radarr: process.env.RADARR_URL || 'http://192.168.1.9:7878',
+      sonarr: process.env.SONARR_URL || 'http://192.168.1.8:8989',
+      overseerr: process.env.OVERSEERR_URL || 'http://192.168.1.12:5055',
+      mission_control: process.env.MISSION_CONTROL_URL || 'http://localhost:3001',
+      haven: process.env.HAVEN_URL || 'http://localhost:3004'
+    }
+
     const services = {
-      plex: { name: 'Plex Media Server', url: 'http://192.168.1.2:32400', status: 'unknown' },
-      radarr: { name: 'Radarr', url: 'http://192.168.1.2:7878', status: 'unknown' },
-      sonarr: { name: 'Sonarr', url: 'http://192.168.1.2:8989', status: 'unknown' },
-      overseerr: { name: 'Overseerr', url: 'http://192.168.1.2:5055', status: 'unknown' },
-      mission_control: { name: 'Mission Control', url: 'http://192.168.1.2:3001/health', status: 'unknown' },
-      haven: { name: 'Haven', url: 'http://192.168.1.2:3004/health', status: 'unknown' }
+      plex: { name: 'Plex Media Server', url: HOSTS.plex, status: 'unknown' },
+      radarr: { name: 'Radarr', url: HOSTS.radarr, status: 'unknown' },
+      sonarr: { name: 'Sonarr', url: HOSTS.sonarr, status: 'unknown' },
+      overseerr: { name: 'Overseerr', url: HOSTS.overseerr, status: 'unknown' },
+      mission_control: { name: 'Mission Control', url: `${HOSTS.mission_control}/health`, status: 'unknown' },
+      haven: { name: 'Haven', url: `${HOSTS.haven}/health`, status: 'unknown' }
     }
 
     // Check HTTP services (internal IP for reliability)
     const httpChecks = [
-      { key: 'plex', url: 'http://192.168.1.2:32400/web/index.html' },
-      { key: 'radarr', url: 'http://192.168.1.2:7878/api/v3/system/status', headers: { 'X-Api-Key': process.env.RADARR_API_KEY } },
-      { key: 'sonarr', url: 'http://192.168.1.2:8989/api/v3/system/status', headers: { 'X-Api-Key': process.env.SONARR_API_KEY } },
-      { key: 'overseerr', url: 'http://192.168.1.2:5055/api/v1/status' },
-      { key: 'mission_control', url: 'http://192.168.1.2:3001/health' },
-      { key: 'haven', url: 'http://192.168.1.2:3004/health' }
+      { key: 'plex', url: `${HOSTS.plex}/web/index.html` },
+      { key: 'radarr', url: `${HOSTS.radarr}/api/v3/system/status`, headers: { 'X-Api-Key': process.env.RADARR_API_KEY } },
+      { key: 'sonarr', url: `${HOSTS.sonarr}/api/v3/system/status`, headers: { 'X-Api-Key': process.env.SONARR_API_KEY } },
+      { key: 'overseerr', url: `${HOSTS.overseerr}/api/v1/status` },
+      { key: 'mission_control', url: `${HOSTS.mission_control}/health` },
+      { key: 'haven', url: `${HOSTS.haven}/health` }
     ]
 
     // Perform HTTP health checks

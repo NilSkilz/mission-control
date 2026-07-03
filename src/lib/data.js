@@ -1,8 +1,13 @@
 import { generateClient } from 'aws-amplify/data'
 
 // Amplify is configured in main.jsx at startup
-// Generate the client once
-const client = generateClient()
+// Generate the client once; null when running without the AWS backend
+let client = null
+try {
+  client = generateClient()
+} catch (e) {
+  console.warn('Amplify data client unavailable, family data disabled:', e.message)
+}
 
 async function getClient() {
   return client
