@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useUser } from '../context/UserContext'
 import { useTideTheme } from './TideThemeProvider'
-import { firstName } from './people'
-import { Label, Ring, EventRow, NowLine, EmptyHint, Pip, formatGBP } from './widgets'
+import { firstName, personColor } from './people'
+import { Label, Ring, EmptyHint, Pip, formatGBP } from './widgets'
 import {
   getUsers, getChores, getChoreCompletions, getNotes, getMeals,
   getCalendarEvents, getToday, getTodayCompletion,
@@ -21,46 +21,47 @@ function nowMinutes(now) {
 }
 
 const DAY_MS = 86400000
-function dayLabel(dateStr, todayStr) {
+function to12h(hhmm) {
+  const [h, m] = hhmm.split(':').map(Number)
+  const ap = h < 12 ? 'am' : 'pm'
+  return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')}${ap}`
+}
+function agendaLabel(dateStr, todayStr) {
   const [y, m, d] = dateStr.split('-').map(Number)
   const dt = new Date(y, m - 1, d)
-  const dm = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toLowerCase() // "4 jul"
   const tomorrow = new Date(Date.now() + DAY_MS).toISOString().slice(0, 10)
-  if (dateStr === todayStr) return `today · ${dm}`
-  if (dateStr === tomorrow) return `tomorrow · ${dm}`
-  const wd = dt.toLocaleDateString('en-GB', { weekday: 'short' }).toLowerCase() // "wed"
-  return `${wd} · ${dm}`
+  if (dateStr === todayStr) return 'today'
+  if (dateStr === tomorrow) return 'tomorrow'
+  return dt.toLocaleDateString('en-GB', { weekday: 'long' }).toLowerCase()
 }
 
-// A clean, borderless 7-day agenda: every day shown (empty ones too), split by
-// hairline separators, with the date on each label.
-function WeekAgenda({ events, now, today }) {
+// DAKboard-style agenda (compact): big thin day numbers, a rule, then event
+// rows with a person-coloured bar. Skips empty days; shows the next few that
+// have something on.
+function WeekAgenda({ events, today }) {
   const byDay = {}
   for (const e of events) (byDay[e.date] ||= []).push(e)
-  const days = Array.from({ length: 7 }, (_, i) => new Date(Date.now() + i * DAY_MS).toISOString().slice(0, 10))
-  const nm = now.getHours() * 60 + now.getMinutes()
+  const dates = Object.keys(byDay).sort().slice(0, 6)
+  if (dates.length === 0) return <EmptyHint>nothing coming up.</EmptyHint>
 
   return (
-    <div>
-      {days.map((d, idx) => {
-        const evs = byDay[d] || []
-        const isToday = d === today
-        const timed = evs.filter((e) => !e.allDay)
-        const rows = []
-        evs.filter((e) => e.allDay).forEach((e, i) => rows.push(<EventRow key={`a${i}`} event={e} />))
-        let placedNow = false
-        timed.forEach((e, i) => {
-          if (isToday && !placedNow && e.sortKey >= nm) { rows.push(<NowLine key="now" />); placedNow = true }
-          rows.push(<EventRow key={`t${i}`} event={e} />)
-        })
-        if (isToday && !placedNow && timed.length > 0) rows.push(<NowLine key="now" />)
+    <div className="tide-agenda sm">
+      {dates.map((key) => {
+        const dd = Number(key.split('-')[2])
         return (
-          <div key={d}>
-            {idx > 0 && <hr className="tide-hr" />}
-            <div style={{ fontSize: 12, fontWeight: 700, color: isToday ? 'var(--tide-accent-ink)' : 'var(--tide-muted)', marginBottom: 3 }}>
-              {dayLabel(d, today)}
+          <div key={key} className="tide-agenda-day">
+            <div className="tide-agenda-head">
+              <span className="tide-agenda-num">{String(dd).padStart(2, '0')}</span>
+              <span className="tide-agenda-label">{agendaLabel(key, today)}</span>
             </div>
-            {evs.length === 0 ? <div className="tide-sub" style={{ fontSize: 13, opacity: 0.7 }}>nothing on</div> : rows}
+            <hr className="tide-agenda-rule" />
+            {byDay[key].map((e, i) => (
+              <div key={i} className="tide-agenda-ev">
+                <span className="tide-agenda-bar" style={{ background: personColor(e.person) }} />
+                <span className="tide-agenda-time">{e.allDay ? 'all day' : to12h(e.time)}</span>
+                <span className="tide-agenda-title">{e.summary}</span>
+              </div>
+            ))}
           </div>
         )
       })}
@@ -81,7 +82,7 @@ export default function TideHome() {
       const today = getToday()
       const [users, chores, completions, notes, meals, cal] = await Promise.all([
         getUsers(), getChores(), getChoreCompletions(), getNotes(),
-        getMeals(), getCalendarEvents({ days: 7 }),
+        getMeals(), getCalendarEvents({ days: 30 }),
       ])
       if (!alive) return
       setState({ loading: false, users, chores, completions, notes, meals, today, events: cal.events || [] })
@@ -142,8 +143,8 @@ export default function TideHome() {
       <div className="tide-home-grid">
         {/* week agenda — borderless, fills the left column */}
         <div className="tide-week-agenda">
-          <Label>the week</Label>
-          <WeekAgenda events={events} now={now} today={today} />
+          <Label style={{ marginBottom: 14 }}>coming up</Label>
+          <WeekAgenda events={events} today={today} />
           <Link to="/calendar" className="tide-sub" style={{ fontSize: 12, display: 'inline-block', marginTop: 10 }}>full calendar →</Link>
         </div>
 

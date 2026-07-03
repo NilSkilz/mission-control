@@ -368,6 +368,16 @@
 }
 .tide-agenda-title { font-size: 16px; font-weight: 700; color: var(--tide-ink); align-self: center; }
 
+/* compact agenda for the home column — slightly smaller, matches the home scale */
+.tide-agenda.sm { max-width: none; }
+.tide-agenda.sm .tide-agenda-day { margin-bottom: 20px; }
+.tide-agenda.sm .tide-agenda-num { font-size: 29px; }
+.tide-agenda.sm .tide-agenda-label { font-size: 15px; }
+.tide-agenda.sm .tide-agenda-rule { margin: 9px 0 4px; }
+.tide-agenda.sm .tide-agenda-ev { padding: 6px 0; min-height: 26px; gap: 12px; }
+.tide-agenda.sm .tide-agenda-time { min-width: 62px; font-size: 12.5px; }
+.tide-agenda.sm .tide-agenda-title { font-size: 14px; }
+
 /* calendar page — month grid */
 .tide-month-head {
   display: grid;
