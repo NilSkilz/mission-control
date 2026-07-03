@@ -12,10 +12,11 @@ import { PredictiveCards } from '../components/PredictiveCards'
 import { ContextCards } from '../components/ContextCards'
 import { TodayTimeline } from '../components/TodayTimeline'
 import { AmbienceProvider, AmbienceStyles } from '../components/AmbienceProvider'
+import { MediaStackCards } from '../components/MediaStackCards'
 import { useTimeAmbience } from '../hooks/useTimeAmbience'
 
-// API base URL - use relative paths in dev, absolute in production
-const API_BASE = import.meta.env.PROD ? 'https://api.cracky.co.uk' : ''
+// API base URL - same-origin; the Express server serves both the frontend and /api
+const API_BASE = import.meta.env.VITE_API_URL || ''
 
 // SVG Icons - blue, semi-transparent
 const Icons = {
@@ -1302,6 +1303,9 @@ export default function SimpleDemo() {
           </div>
         </div>
         
+        {/* Media stack cards */}
+        <MediaStackCards />
+
         {/* WebSocket connection status - subtle footer */}
         <div className="mt-4 flex justify-center">
           <div className="flex items-center gap-1.5 text-xs font-mono text-slate-600">

@@ -15,7 +15,7 @@ const ExternalLinkIcon = (
   </svg>
 );
 
-const API_BASE = import.meta.env.PROD ? 'https://api.cracky.co.uk' : '';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export function JarvisStatusPanel() {
   const [status, setStatus] = useState(null);

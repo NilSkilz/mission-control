@@ -96,6 +96,14 @@ async function setupRoutes() {
   }
 
   try {
+    const mediaModule = await import('./routes/media.js');
+    app.use('/api/media', mediaModule.default);
+    console.log('✓ Media routes loaded');
+  } catch (e) {
+    console.error('✗ Failed to load media routes:', e.message);
+  }
+
+  try {
     const systemModule = await import('./routes/system.js');
     app.use('/api/system', systemModule.systemRoutes);
     app.use('/api/notifications', systemModule.systemRoutes);

@@ -15,10 +15,10 @@ export function useHAWebSocket() {
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
     
-    // Determine WebSocket URL based on environment
+    // Same-origin in production (Express serves frontend + /ws); Vite dev server needs the API port
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsHost = import.meta.env.PROD 
-      ? 'api.cracky.co.uk' 
+    const wsHost = import.meta.env.PROD
+      ? window.location.host
       : window.location.hostname + ':3001';
     const wsUrl = `${wsProtocol}//${wsHost}/ws`;
     

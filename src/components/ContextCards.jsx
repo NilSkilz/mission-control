@@ -9,7 +9,7 @@ import { Card } from './ui'
  * Cards slide in when conditions are met, slide out when they're not.
  */
 
-const API_BASE = import.meta.env.PROD ? 'https://api.cracky.co.uk' : ''
+const API_BASE = import.meta.env.VITE_API_URL || ''
 
 // Icons for context cards
 const Icons = {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Card } from './ui';
 
-const API_BASE = import.meta.env.PROD ? 'https://api.cracky.co.uk' : '';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // Scene icons
 const Icons = {

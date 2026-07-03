@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from './ui';
 
-const API_BASE = import.meta.env.PROD ? 'https://api.cracky.co.uk' : '';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // Icons
 const Icons = {
