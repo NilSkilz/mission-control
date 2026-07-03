@@ -7,6 +7,7 @@ import TideNotes from './tide/TideNotes'
 import TideCinema from './tide/TideCinema'
 import TideHouse from './tide/TideHouse'
 import TideJarvis from './tide/TideJarvis'
+import TidePeople from './tide/TidePeople'
 import SystemFrame from './tide/SystemFrame'
 import LoginScreen from './components/LoginScreen'
 
@@ -84,6 +85,7 @@ function AppRoutes() {
       <Route path="/cinema" element={<Family><TideCinema /></Family>} />
       <Route path="/house" element={<Family><TideHouse /></Family>} />
       <Route path="/jarvis" element={<Family><TideJarvis /></Family>} />
+      <Route path="/people" element={<Family requireParent><TidePeople /></Family>} />
 
       {/* system (legacy sci-fi, parent-only) */}
       <Route path="/system" element={<System><SimpleDemo /></System>} />

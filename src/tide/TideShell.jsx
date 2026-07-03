@@ -111,9 +111,10 @@ export default function TideShell({ children }) {
               </Link>
             ))}
             {isParent && (
-              <Link to="/system" className={active === 'system' ? 'on' : ''}>
-                system
-              </Link>
+              <>
+                <Link to="/people" className={active === 'people' ? 'on' : ''}>people</Link>
+                <Link to="/system" className={active === 'system' ? 'on' : ''}>system</Link>
+              </>
             )}
           </nav>
 

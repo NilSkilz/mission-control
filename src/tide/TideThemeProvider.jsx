@@ -4,6 +4,7 @@ import { getSunTimes, isDaylight } from './sun'
 const TideThemeContext = createContext(null)
 
 const STORAGE_KEY = 'tide-theme-mode' // 'auto' | 'day' | 'night'
+const DEFAULT_MODE = 'night' // dark by default; users can switch to auto (follow sun) or day
 
 function greetingWord(now, phase) {
   const h = now.getHours()
@@ -14,7 +15,7 @@ function greetingWord(now, phase) {
 }
 
 export function TideThemeProvider({ children }) {
-  const [mode, setMode] = useState(() => localStorage.getItem(STORAGE_KEY) || 'auto')
+  const [mode, setMode] = useState(() => localStorage.getItem(STORAGE_KEY) || DEFAULT_MODE)
   const [now, setNow] = useState(() => new Date())
 
   // recompute the clock every minute so the crossfade fires at sunrise/sunset

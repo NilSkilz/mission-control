@@ -94,6 +94,29 @@ export async function fetchMe() {
   } catch { return null }
 }
 
+// Parent-only people management (token attached by the fetch interceptor).
+export async function resetPassword(userId, newPassword) {
+  const res = await fetch(`${AUTH_BASE}/reset-password`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, newPassword }),
+  })
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'reset failed')
+  return true
+}
+export async function addPerson(person) {
+  const res = await fetch(`${AUTH_BASE}/people`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(person),
+  })
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'could not add person')
+  return res.json()
+}
+export async function removePerson(id) {
+  const res = await fetch(`${AUTH_BASE}/people/${id}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'could not remove person')
+  return true
+}
+
 export async function changePassword(userId, currentPassword, newPassword) {
   const res = await fetch(`${AUTH_BASE}/change-password`, {
     method: 'POST',
