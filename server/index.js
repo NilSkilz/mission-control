@@ -68,6 +68,14 @@ async function setupRoutes() {
   }
 
   try {
+    const servicesModule = await import('./routes/services.js');
+    app.use('/api/services', servicesModule.default);
+    console.log('✓ Services routes loaded');
+  } catch (e) {
+    console.error('✗ Failed to load services routes:', e.message);
+  }
+
+  try {
     const calModule = await import('./routes/calendar.js');
     app.use('/api/calendar', calModule.default);
     console.log('✓ Calendar routes loaded');

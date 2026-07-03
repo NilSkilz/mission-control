@@ -374,6 +374,24 @@ export async function markNoteSeen(id, userId) {
   return request(`/notes/${id}/seen`, { method: 'POST', body: { userId } })
 }
 
+// ==================== SYSTEM / SERVICES ====================
+
+export async function getServices() {
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/services`, { headers: authHeaders() })
+    if (!res.ok) return { services: [] }
+    return res.json()
+  } catch { return { services: [] } }
+}
+
+export async function getMediaSummary() {
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/media/summary`, { headers: authHeaders() })
+    if (!res.ok) return null
+    return (await res.json()).data || null
+  } catch { return null }
+}
+
 // ==================== JARVIS CHAT ====================
 
 export async function askJarvis(userId, message) {

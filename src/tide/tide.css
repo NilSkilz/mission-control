@@ -407,6 +407,15 @@
 .tide-monthcell:hover { border-color: var(--tide-accent-ink); }
 @media (max-width: 560px) { .tide-monthcell { min-height: 58px; } }
 
+/* system page — service link grid */
+.tide-service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+.tide-service { transition: transform 120ms ease, border-color 200ms ease; }
+.tide-service:hover { transform: translateY(-2px); border-color: var(--tide-accent-ink); }
+
 /* recipe book grid */
 .tide-recipe-grid {
   display: grid;

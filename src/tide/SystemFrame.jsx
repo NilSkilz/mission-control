@@ -3,7 +3,8 @@ import { Link, useLocation } from 'react-router-dom'
 // Wraps the legacy sci-fi / system pages unchanged, adding only a slim bar to
 // get back to the family shell. The terminal aesthetic inside stays untouched.
 const SYS_NAV = [
-  { to: '/system', label: 'dashboard' },
+  { to: '/system', label: 'system' },
+  { to: '/system/dashboard', label: 'dashboard' },
   { to: '/system/agents', label: 'agents' },
   { to: '/system/admin', label: 'admin' },
   { to: '/system/documents', label: 'documents' },
