@@ -343,6 +343,31 @@
 @media (max-width: 900px) { .tide-week-cols { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 480px) { .tide-week-cols { grid-template-columns: 1fr; } }
 
+/* calendar page — DAKboard-style agenda (big thin day numbers, rule, bold titles) */
+.tide-agenda { max-width: 640px; }
+.tide-agenda-day { margin-bottom: 30px; }
+.tide-agenda-head { display: flex; align-items: baseline; gap: 12px; }
+.tide-agenda-num {
+  font-size: 40px;
+  font-weight: 200;
+  letter-spacing: -0.02em;
+  color: var(--tide-muted);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.tide-agenda-label { font-size: 19px; font-weight: 600; color: var(--tide-ink); }
+.tide-agenda-rule { border: none; border-top: 1px solid var(--tide-hair); margin: 12px 0 6px; }
+.tide-agenda-ev { display: flex; align-items: stretch; gap: 16px; padding: 8px 0; min-height: 30px; }
+.tide-agenda-bar { width: 3px; flex: none; border-radius: 2px; opacity: 0.85; }
+.tide-agenda-time {
+  min-width: 84px; flex: none;
+  color: var(--tide-muted);
+  font-size: 14px;
+  align-self: center;
+  font-variant-numeric: tabular-nums;
+}
+.tide-agenda-title { font-size: 16px; font-weight: 700; color: var(--tide-ink); align-self: center; }
+
 /* calendar page — month grid */
 .tide-month-head {
   display: grid;

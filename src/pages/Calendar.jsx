@@ -1,7 +1,14 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useTideTheme } from '../tide/TideThemeProvider'
 import { Label, Pip, EmptyHint } from '../tide/widgets'
+import { personColor } from '../tide/people'
 import { getCalendarEvents } from '../lib/data'
+
+function to12h(hhmm) {
+  const [h, m] = hhmm.split(':').map(Number)
+  const ap = h < 12 ? 'AM' : 'PM'
+  return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${ap}`
+}
 
 const DAY_MS = 86400000
 const iso = (d) => d.toISOString().slice(0, 10)
@@ -34,12 +41,12 @@ function EventLine({ e }) {
 
 export default function CalendarPage() {
   const { now } = useTideTheme()
-  const [view, setView] = useState('week')
+  const [view, setView] = useState('agenda')
   const [anchor, setAnchor] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d })
   const [state, setState] = useState({ loading: true, events: [], configured: true })
 
   const start = view === 'month' ? monthGridStart(anchor) : view === 'week' ? weekStart(anchor) : anchor
-  const days = view === 'month' ? 42 : view === 'week' ? 7 : 1
+  const days = view === 'agenda' ? 42 : view === 'month' ? 42 : view === 'week' ? 7 : 1
 
   const load = useCallback(async () => {
     setState((s) => ({ ...s, loading: true }))
@@ -51,7 +58,7 @@ export default function CalendarPage() {
 
   const step = (dir) => setAnchor((d) => {
     if (view === 'month') return new Date(d.getFullYear(), d.getMonth() + dir, Math.min(d.getDate(), 28))
-    return addDays(d, dir * (view === 'week' ? 7 : 1))
+    return addDays(d, dir * (view === 'agenda' ? 14 : view === 'week' ? 7 : 1))
   })
   const goToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); setAnchor(d) }
   const openDay = (d) => { setAnchor(d); setView('day') }
@@ -61,11 +68,21 @@ export default function CalendarPage() {
   const byDay = {}
   for (const e of state.events) (byDay[e.date] ||= []).push(e)
 
-  const rangeLabel = view === 'month'
-    ? anchor.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }).toLowerCase()
-    : view === 'week'
-      ? `${fmtDay(weekStart(anchor), { day: 'numeric', month: 'short' })} – ${fmtDay(addDays(weekStart(anchor), 6), { day: 'numeric', month: 'short' })}`
-      : fmtDay(anchor)
+  const rangeLabel = view === 'agenda'
+    ? 'what\'s coming up'
+    : view === 'month'
+      ? anchor.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }).toLowerCase()
+      : view === 'week'
+        ? `${fmtDay(weekStart(anchor), { day: 'numeric', month: 'short' })} – ${fmtDay(addDays(weekStart(anchor), 6), { day: 'numeric', month: 'short' })}`
+        : fmtDay(anchor)
+
+  // relative day label for the agenda (Today / Tomorrow / weekday)
+  const agendaLabel = (d) => {
+    const key = iso(d)
+    if (key === todayIso) return 'Today'
+    if (key === iso(addDays(now, 1))) return 'Tomorrow'
+    return d.toLocaleDateString('en-GB', { weekday: 'long' })
+  }
 
   return (
     <div>
@@ -75,7 +92,7 @@ export default function CalendarPage() {
       {/* controls */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 14, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 4, background: 'var(--tide-card)', border: '1px solid var(--tide-card-border)', borderRadius: 999, padding: 3 }}>
-          {['day', 'week', 'month'].map((v) => (
+          {['agenda', 'day', 'week', 'month'].map((v) => (
             <button key={v} onClick={() => setView(v)} className="tide-btn" style={{
               padding: '5px 14px', fontSize: 13,
               background: view === v ? 'var(--tide-grad-135)' : 'transparent',
@@ -92,6 +109,34 @@ export default function CalendarPage() {
 
       {state.loading ? (
         <p className="tide-sub" style={{ marginTop: 18 }}>loading…</p>
+      ) : view === 'agenda' ? (
+        <div className="tide-agenda" style={{ marginTop: 20 }}>
+          {(() => {
+            // days that actually have events, in order (DAKboard skips empty days)
+            const dates = Object.keys(byDay).sort()
+            if (dates.length === 0) return <EmptyHint>nothing coming up.</EmptyHint>
+            return dates.map((key) => {
+              const [y, m, dd] = key.split('-').map(Number)
+              const d = new Date(y, m - 1, dd)
+              return (
+                <div key={key} className="tide-agenda-day">
+                  <div className="tide-agenda-head">
+                    <span className="tide-agenda-num">{String(dd).padStart(2, '0')}</span>
+                    <span className="tide-agenda-label">{agendaLabel(d)}</span>
+                  </div>
+                  <hr className="tide-agenda-rule" />
+                  {byDay[key].map((e, i) => (
+                    <div key={i} className="tide-agenda-ev">
+                      <span className="tide-agenda-bar" style={{ background: personColor(e.person) }} />
+                      <span className="tide-agenda-time">{e.allDay ? 'All day' : to12h(e.time)}</span>
+                      <span className="tide-agenda-title">{e.summary}</span>
+                    </div>
+                  ))}
+                </div>
+              )
+            })
+          })()}
+        </div>
       ) : view === 'day' ? (
         <div style={{ marginTop: 18 }}>
           <Label>{fmtDay(anchor, { weekday: 'long' })}</Label>
