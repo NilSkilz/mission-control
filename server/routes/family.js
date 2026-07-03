@@ -12,7 +12,7 @@ router.get('/calendar', async (req, res) => {
   const url = process.env.CALENDAR_ICS_URL;
   if (!url) return res.json({ events: [], configured: false });
   const startDate = req.query.date || new Date().toISOString().slice(0, 10);
-  const days = Math.min(Math.max(parseInt(req.query.days || '1', 10) || 1, 1), 31);
+  const days = Math.min(Math.max(parseInt(req.query.days || '1', 10) || 1, 1), 42);
   try {
     const events = await getEvents({ url, startDate, days });
     res.json({ events, configured: true });

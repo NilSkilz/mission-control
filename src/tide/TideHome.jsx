@@ -20,6 +20,52 @@ function nowMinutes(now) {
   return now.getHours() * 60 + now.getMinutes()
 }
 
+const DAY_MS = 86400000
+function dayLabel(dateStr, todayStr) {
+  if (dateStr === todayStr) return 'today'
+  const tomorrow = new Date(Date.now() + DAY_MS).toISOString().slice(0, 10)
+  if (dateStr === tomorrow) return 'tomorrow'
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' }).toLowerCase()
+}
+
+// A clean, borderless 7-day agenda. Days with nothing on are skipped (today always shows).
+function WeekAgenda({ events, now, today }) {
+  const byDay = {}
+  for (const e of events) (byDay[e.date] ||= []).push(e)
+  const days = Array.from({ length: 7 }, (_, i) => new Date(Date.now() + i * DAY_MS).toISOString().slice(0, 10))
+  const nm = now.getHours() * 60 + now.getMinutes()
+
+  const shown = days.filter((d) => d === today || (byDay[d] && byDay[d].length))
+  if (shown.length === 0) return <EmptyHint>nothing on the calendar this week.</EmptyHint>
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {shown.map((d) => {
+        const evs = byDay[d] || []
+        const isToday = d === today
+        const timed = evs.filter((e) => !e.allDay)
+        const rows = []
+        evs.filter((e) => e.allDay).forEach((e, i) => rows.push(<EventRow key={`a${i}`} event={e} />))
+        let placedNow = false
+        timed.forEach((e, i) => {
+          if (isToday && !placedNow && e.sortKey >= nm) { rows.push(<NowLine key="now" />); placedNow = true }
+          rows.push(<EventRow key={`t${i}`} event={e} />)
+        })
+        if (isToday && !placedNow && timed.length > 0) rows.push(<NowLine key="now" />)
+        return (
+          <div key={d}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: isToday ? 'var(--tide-accent-ink)' : 'var(--tide-muted)', marginBottom: 2 }}>
+              {dayLabel(d, today)}
+            </div>
+            {evs.length === 0 ? <div className="tide-sub" style={{ fontSize: 13 }}>nothing on</div> : rows}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function TideHome() {
   const { user } = useUser()
   const { greeting, now } = useTideTheme()
@@ -33,7 +79,7 @@ export default function TideHome() {
       const today = getToday()
       const [users, chores, completions, notes, meals, cal] = await Promise.all([
         getUsers(), getChores(), getChoreCompletions(), getNotes(),
-        getMeals(), getCalendarEvents({ days: 1 }),
+        getMeals(), getCalendarEvents({ days: 7 }),
       ])
       if (!alive) return
       setState({ loading: false, users, chores, completions, notes, meals, today, events: cal.events || [] })
@@ -81,8 +127,6 @@ export default function TideHome() {
   ].filter(Boolean)
 
   const greetName = isParent ? 'stokes family' : firstName(user).toLowerCase()
-  const nm = nowMinutes(now)
-  const nowPlaced = events.some((e) => !e.allDay) // only show NOW line if there are timed events
 
   return (
     <div style={{ paddingTop: 6 }}>
@@ -94,23 +138,11 @@ export default function TideHome() {
 
       {/* three-column rhythm on desktop, stacked on phone */}
       <div className="tide-home-grid">
-        {/* today rail */}
-        <div className="tide-card" style={{ padding: 16 }}>
-          <Label>today</Label>
-          {events.length === 0 && <EmptyHint>nothing on the calendar today.</EmptyHint>}
-          {(() => {
-            const timed = events.filter((e) => !e.allDay)
-            const allDay = events.filter((e) => e.allDay)
-            const rows = []
-            allDay.forEach((e, i) => rows.push(<EventRow key={`ad${i}`} event={e} />))
-            let placedNow = false
-            timed.forEach((e, i) => {
-              if (nowPlaced && !placedNow && e.sortKey >= nm) { rows.push(<NowLine key="now" />); placedNow = true }
-              rows.push(<EventRow key={`t${i}`} event={e} />)
-            })
-            if (nowPlaced && !placedNow) rows.push(<NowLine key="now" />)
-            return rows
-          })()}
+        {/* week agenda — borderless, fills the left column */}
+        <div className="tide-week-agenda">
+          <Label>the week</Label>
+          <WeekAgenda events={events} now={now} today={today} />
+          <Link to="/calendar" className="tide-sub" style={{ fontSize: 12, display: 'inline-block', marginTop: 10 }}>full calendar →</Link>
         </div>
 
         {/* chores */}
