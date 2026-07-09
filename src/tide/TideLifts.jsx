@@ -218,19 +218,35 @@ export default function TideLifts() {
                   {r.extras && <div className="tide-sub" style={{ marginTop: 2 }}>needs: {r.extras}</div>}
                   {r.note && <div className="tide-sub" style={{ marginTop: 2 }}>“{r.note}”</div>}
 
-                  {isParent && !mine && (
-                    <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <input className="tide-input" placeholder="add a note (optional)" value={respNotes[r.id] || ''} onChange={(e) => setRespNotes((n) => ({ ...n, [r.id]: e.target.value }))} />
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button onClick={() => respond(r, 'accepted')} className="tide-btn tide-btn-primary" style={{ padding: '8px 16px' }}>I’ll take it</button>
-                        <button onClick={() => respond(r, 'denied')} className="tide-btn tide-btn-ghost" style={{ padding: '8px 14px' }}>can’t</button>
+                  {isParent && !mine && (() => {
+                    const denied = JSON.parse(r.deniedBy || '[]')
+                    const iPassed = denied.includes(user.id)
+                    const others = denied.filter((id) => id !== user.id).map((id) => firstName(userById[id])).filter(Boolean)
+                    return (
+                      <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {others.length > 0 && <div className="tide-sub" style={{ fontSize: 12 }}>{others.join(' & ')} can’t — you’re the last shout.</div>}
+                        {iPassed ? (
+                          <>
+                            <div className="tide-sub" style={{ fontSize: 12 }}>you passed — still asking the others.</div>
+                            <button onClick={() => respond(r, 'accepted')} className="tide-btn tide-btn-ghost" style={{ padding: '8px 16px', alignSelf: 'flex-start' }}>actually, I’ll take it</button>
+                          </>
+                        ) : (
+                          <>
+                            <input className="tide-input" placeholder="add a note (optional)" value={respNotes[r.id] || ''} onChange={(e) => setRespNotes((n) => ({ ...n, [r.id]: e.target.value }))} />
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <button onClick={() => respond(r, 'accepted')} className="tide-btn tide-btn-primary" style={{ padding: '8px 16px' }}>I’ll take it</button>
+                              <button onClick={() => respond(r, 'denied')} className="tide-btn tide-btn-ghost" style={{ padding: '8px 14px' }}>can’t</button>
+                            </div>
+                          </>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    )
+                  })()}
                   {mine && (
                     <button onClick={() => cancel(r)} className="tide-btn tide-btn-ghost" style={{ marginTop: 10, padding: '6px 12px', fontSize: 13 }}>cancel</button>
                   )}
                   {!isParent && !mine && <div className="tide-sub" style={{ marginTop: 8, fontSize: 12 }}>⏳ waiting for a grown-up</div>}
+                  {mine && JSON.parse(r.deniedBy || '[]').length > 0 && <div className="tide-sub" style={{ marginTop: 6, fontSize: 12 }}>one grown-up can’t — still asking the other.</div>}
                 </div>
               )
             })}

@@ -66,6 +66,23 @@ export function notifyNewLift(row, users) {
   });
 }
 
+// One parent passed but the request is still open -> nudge the parent(s) who
+// haven't answered yet, so it doesn't just sit there waiting.
+export function notifyLiftStillWaiting(row, users, passedUserId) {
+  const creator = users.find((u) => u.id === row.createdBy);
+  const passer = users.find((u) => u.id === passedUserId);
+  const denied = new Set(JSON.parse(row.deniedBy || '[]'));
+  const waiting = users
+    .filter((u) => u.role === 'parent' && u.id !== row.createdBy && !denied.has(u.id))
+    .map((u) => u.id);
+  return sendToUsers(waiting, {
+    title: '🚗 Lift still needs a driver',
+    body: `${passer ? passer.displayName : 'A parent'} can't take ${creator ? creator.displayName : 'them'} ${whenLabel(row.dateTime)} — can you?`,
+    url: '/lifts',
+    tag: `lift-${row.id}`,
+  });
+}
+
 // Accepted/denied -> tell the person who asked.
 export function notifyLiftResolved(row, users) {
   const responder = users.find((u) => u.id === row.respondedBy);

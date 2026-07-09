@@ -4,7 +4,7 @@ import express from 'express';
 import db, { list, get, create, update, remove } from '../lib/familyDb.js';
 import { getEvents } from '../lib/icsCalendar.js';
 import { randomUUID } from 'crypto';
-import { vapidPublicKey, notifyNewLift, notifyLiftResolved } from '../lib/push.js';
+import { vapidPublicKey, notifyNewLift, notifyLiftResolved, notifyLiftStillWaiting } from '../lib/push.js';
 
 const router = express.Router();
 
@@ -94,8 +94,13 @@ crud('lifts', 'liftRequests', {
   afterCreate: (row) => notifyNewLift(row, list('users')),
 });
 
-// A parent accepts or denies an open request. First response wins: the atomic
-// UPDATE only fires while status is still 'open', so a second responder gets a 409.
+// A parent accepts or denies an open request.
+//  - First ACCEPT wins: the atomic UPDATE only fires while still 'open', so a
+//    second responder trying to accept gets a 409.
+//  - A DENY does not close the request. We record the parent in `deniedBy` and
+//    leave it open for the other parent(s). It only flips to 'denied' once every
+//    parent who could take it has passed. Node is single-threaded and there's no
+//    await between the read and write below, so the read-modify-write is atomic.
 router.post('/lifts/:id/respond', (req, res) => {
   const { userId, decision, note } = req.body;
   if (!['accepted', 'denied'].includes(decision)) {
@@ -105,18 +110,57 @@ router.post('/lifts/:id/respond', (req, res) => {
   if (!actor || actor.role !== 'parent') {
     return res.status(403).json({ error: 'only a parent can respond to a lift request' });
   }
-  const now = new Date().toISOString();
-  const result = db.prepare(
-    `UPDATE liftRequests
-        SET status = @decision, respondedBy = @userId, respondedAt = @now,
-            responseNote = @note, updatedAt = @now
-      WHERE id = @id AND status = 'open'`
-  ).run({ id: req.params.id, decision, userId, now, note: (note && note.trim()) || null });
   const row = get('liftRequests', req.params.id);
   if (!row) return res.status(404).json({ error: 'not found' });
-  if (result.changes === 0) return res.status(409).json({ error: 'already resolved', request: row });
-  notifyLiftResolved(row, list('users')).catch((e) => console.error('lift resolve notify:', e));
-  res.json(row);
+  if (row.status !== 'open') return res.status(409).json({ error: 'already resolved', request: row });
+
+  const now = new Date().toISOString();
+  const trimmedNote = (note && note.trim()) || null;
+  const users = list('users');
+
+  if (decision === 'accepted') {
+    const result = db.prepare(
+      `UPDATE liftRequests
+          SET status = 'accepted', respondedBy = @userId, respondedAt = @now,
+              responseNote = @note, updatedAt = @now
+        WHERE id = @id AND status = 'open'`
+    ).run({ id: req.params.id, userId, now, note: trimmedNote });
+    const updated = get('liftRequests', req.params.id);
+    if (result.changes === 0) return res.status(409).json({ error: 'already resolved', request: updated });
+    notifyLiftResolved(updated, users).catch((e) => console.error('lift resolve notify:', e));
+    return res.json(updated);
+  }
+
+  // decision === 'denied'
+  const requiredDeniers = users
+    .filter((u) => u.role === 'parent' && u.id !== row.createdBy)
+    .map((u) => u.id);
+  const deniedBy = new Set(JSON.parse(row.deniedBy || '[]'));
+  deniedBy.add(userId);
+  const deniedJson = JSON.stringify([...deniedBy]);
+  const allPassed = requiredDeniers.length > 0 && requiredDeniers.every((id) => deniedBy.has(id));
+
+  if (allPassed) {
+    db.prepare(
+      `UPDATE liftRequests
+          SET status = 'denied', respondedBy = @userId, respondedAt = @now,
+              responseNote = @note, deniedBy = @deniedBy, updatedAt = @now
+        WHERE id = @id AND status = 'open'`
+    ).run({ id: req.params.id, userId, now, note: trimmedNote, deniedBy: deniedJson });
+    const updated = get('liftRequests', req.params.id);
+    notifyLiftResolved(updated, users).catch((e) => console.error('lift resolve notify:', e));
+    return res.json(updated);
+  }
+
+  // Still open — this parent passed, waiting on the other(s). Nudge them.
+  db.prepare(
+    `UPDATE liftRequests
+        SET deniedBy = @deniedBy, updatedAt = @now
+      WHERE id = @id AND status = 'open'`
+  ).run({ id: req.params.id, now, deniedBy: deniedJson });
+  const updated = get('liftRequests', req.params.id);
+  notifyLiftStillWaiting(updated, users, userId).catch((e) => console.error('lift waiting notify:', e));
+  res.json(updated);
 });
 
 // The requester cancels their own still-open request.

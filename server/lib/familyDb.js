@@ -149,6 +149,7 @@ db.exec(`
     respondedBy TEXT REFERENCES users(id),
     respondedAt TEXT,
     responseNote TEXT,
+    deniedBy TEXT,                       -- JSON array of parent ids who passed; deny closes only when all have
     createdAt TEXT NOT NULL,
     updatedAt TEXT NOT NULL
   );
@@ -219,6 +220,13 @@ if (assignedCol && assignedCol.notnull === 1) {
 if (db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='filmRequests'").get()
     && !db.prepare('PRAGMA table_info(filmRequests)').all().some((c) => c.name === 'kind')) {
   db.exec("ALTER TABLE filmRequests ADD COLUMN kind TEXT NOT NULL DEFAULT 'film'");
+}
+
+// A single deny no longer closes a lift — it now needs every parent to pass.
+// Track who has passed so far; DBs created before this need the column.
+if (db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='liftRequests'").get()
+    && !db.prepare('PRAGMA table_info(liftRequests)').all().some((c) => c.name === 'deniedBy')) {
+  db.exec('ALTER TABLE liftRequests ADD COLUMN deniedBy TEXT');
 }
 
 // Add passwordHash for real server-side auth (was a client-side hardcoded map).
