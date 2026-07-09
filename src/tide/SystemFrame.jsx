@@ -23,7 +23,7 @@ export default function SystemFrame({ children }) {
         }}
       >
         <Link to="/" style={{ color: '#5eead4', fontSize: 12, textDecoration: 'none', fontWeight: 600 }}>
-          ← stokeshq
+          ← tide
         </Link>
         <span style={{ color: '#334155' }}>/</span>
         <nav style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>

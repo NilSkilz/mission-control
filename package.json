@@ -1,5 +1,5 @@
 {
-  "name": "mission-control",
+  "name": "tide",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -50,7 +50,7 @@
     "typescript": "^5.0.0",
     "vite": "^5.1.0"
   },
-  "description": "Family mission control: shared dashboard for calendar, chores, notes, meals and media.",
+  "description": "Tide: the family app — shared dashboard for calendar, chores, notes, meals and media.",
   "main": "postcss.config.js",
   "repository": {
     "type": "git",

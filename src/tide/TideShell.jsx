@@ -129,7 +129,7 @@ export default function TideShell({ children }) {
           }}
         >
           <Link to="/" className="tide-logo">
-            stokes<span className="tide-grad">hq</span>
+            ti<span className="tide-grad">de</span>
           </Link>
 
           <nav className="tide-nav tide-nav-desktop">

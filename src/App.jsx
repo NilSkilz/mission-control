@@ -34,7 +34,7 @@ function Loading() {
     <div className="tide-shell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="tide-glow" />
       <div className="tide-content tide-grad" style={{ fontWeight: 800, fontSize: 20 }}>
-        stokeshq…
+        tide…
       </div>
     </div>
   )

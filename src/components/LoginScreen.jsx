@@ -41,7 +41,7 @@ export default function LoginScreen() {
       >
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <div className="tide-logo" style={{ fontSize: 26 }}>
-            stokes<span className="tide-grad">hq</span>
+            ti<span className="tide-grad">de</span>
           </div>
           <p className="tide-sub" style={{ marginTop: 10, fontSize: 15 }}>
             {selectedUser ? `hi ${firstName(selectedUser).toLowerCase()}` : "who's home?"}
