@@ -288,6 +288,82 @@
 .tide-tabbar a.on { color: var(--tide-nav-on); }
 .tide-tabbar a.on svg { stroke: url(#tideTabGrad); }
 
+/* "More" tab button — matches the tabbar links */
+.tide-more-btn {
+  appearance: none;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--tide-faint);
+  flex: 1 0 auto;
+  min-width: 54px;
+  padding: 0;
+}
+.tide-more-btn.on { color: var(--tide-nav-on); }
+.tide-more-btn.on svg { fill: var(--tide-nav-on); }
+
+/* ===== More sheet ===== */
+.tide-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: color-mix(in srgb, var(--tide-ground) 35%, rgba(0, 0, 0, 0.5));
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: tide-fade 160ms ease;
+}
+.tide-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 51;
+  background: var(--tide-ground);
+  border-top: 1px solid var(--tide-hair);
+  border-radius: 18px 18px 0 0;
+  padding: 10px 16px calc(20px + env(safe-area-inset-bottom));
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.28);
+  animation: tide-slide-up 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.tide-sheet-grip {
+  width: 38px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--tide-hair);
+  margin: 2px auto 14px;
+}
+.tide-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.tide-sheet-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 16px 6px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tide-muted);
+  text-decoration: none;
+  background: color-mix(in srgb, var(--tide-ink) 4%, transparent);
+}
+.tide-sheet-item:hover { background: color-mix(in srgb, var(--tide-ink) 8%, transparent); }
+.tide-sheet-item.on { color: var(--tide-nav-on); }
+.tide-sheet-item.on svg { stroke: url(#tideTabGrad); }
+@keyframes tide-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tide-slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
 /* home three-column rhythm (mock: 1.35fr / 1fr / 1fr), stacks on phone */
 .tide-home-grid {
   display: grid;
@@ -436,5 +512,7 @@
   .tide-shell,
   .tide-card,
   .tide-glow::before,
-  .tide-glow::after { transition: none; animation: none; }
+  .tide-glow::after,
+  .tide-sheet,
+  .tide-sheet-backdrop { transition: none; animation: none; }
 }

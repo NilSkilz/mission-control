@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useUser } from '../context/UserContext'
 import { useTideTheme } from './TideThemeProvider'
@@ -11,6 +12,8 @@ const ICONS = {
   meals: 'M5 3v8m3-8v8m-3 0v10M8 11v10M15 3c-1.5 1-2 3-2 5s.5 3 2 3 2-1 2-3-.5-4-2-5zm.5 8v10',
   cinema: 'M4 5h16v14H4zM4 9h16M8 5v4m8-4v4M8 19v-4m8 4v-4M4 15h16',
   house: 'M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5M10 21v-6h4v6',
+  people: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8m13 10v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
+  system: 'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6',
 }
 
 function NavIcon({ name }) {
@@ -31,6 +34,16 @@ const NAV = [
   { key: 'notes', label: 'notes', to: '/notes', icon: 'notes' },
   { key: 'cinema', label: 'cinema', to: '/cinema', icon: 'cinema' },
   { key: 'house', label: 'house', to: '/house', icon: 'house' },
+]
+
+// Mobile keeps the daily-use screens as bottom tabs; the rest live behind "More".
+const PRIMARY_KEYS = ['home', 'calendar', 'meals', 'chores']
+const PRIMARY_NAV = PRIMARY_KEYS.map((k) => NAV.find((i) => i.key === k))
+const OVERFLOW_NAV = NAV.filter((i) => !PRIMARY_KEYS.includes(i.key))
+// Parent-only management screens — sheet only.
+const PARENT_NAV = [
+  { key: 'people', label: 'people', to: '/people', icon: 'people' },
+  { key: 'system', label: 'system', to: '/system', icon: 'system' },
 ]
 
 function currentKey(pathname) {
@@ -73,6 +86,21 @@ export default function TideShell({ children }) {
   const location = useLocation()
   const active = currentKey(location.pathname)
   const isParent = user?.role === 'parent'
+  const [moreOpen, setMoreOpen] = useState(false)
+
+  // Close the More sheet whenever the route changes.
+  useEffect(() => { setMoreOpen(false) }, [location.pathname])
+
+  // Close on Escape.
+  useEffect(() => {
+    if (!moreOpen) return
+    const onKey = (e) => { if (e.key === 'Escape') setMoreOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [moreOpen])
+
+  const sheetNav = isParent ? [...OVERFLOW_NAV, ...PARENT_NAV] : OVERFLOW_NAV
+  const overflowActive = sheetNav.some((i) => i.key === active)
 
   return (
     <div className="tide-shell">
@@ -145,15 +173,52 @@ export default function TideShell({ children }) {
         </main>
       </div>
 
-      {/* mobile bottom nav */}
+      {/* mobile bottom nav: daily tabs + More */}
       <nav className="tide-tabbar tide-nav-mobile">
-        {NAV.map((item) => (
+        {PRIMARY_NAV.map((item) => (
           <Link key={item.key} to={item.to} className={active === item.key ? 'on' : ''}>
             <NavIcon name={item.icon} />
             {item.label}
           </Link>
         ))}
+        <button
+          type="button"
+          className={`tide-more-btn${overflowActive || moreOpen ? ' on' : ''}`}
+          onClick={() => setMoreOpen((v) => !v)}
+          aria-haspopup="true"
+          aria-expanded={moreOpen}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <circle cx="5" cy="12" r="2" />
+            <circle cx="12" cy="12" r="2" />
+            <circle cx="19" cy="12" r="2" />
+          </svg>
+          more
+        </button>
       </nav>
+
+      {/* More sheet (mobile only) */}
+      {moreOpen && (
+        <div className="tide-nav-mobile">
+          <div className="tide-sheet-backdrop" onClick={() => setMoreOpen(false)} />
+          <div className="tide-sheet" role="dialog" aria-label="More navigation">
+            <div className="tide-sheet-grip" />
+            <div className="tide-sheet-grid">
+              {sheetNav.map((item) => (
+                <Link
+                  key={item.key}
+                  to={item.to}
+                  className={`tide-sheet-item${active === item.key ? ' on' : ''}`}
+                  onClick={() => setMoreOpen(false)}
+                >
+                  <NavIcon name={item.icon} />
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
