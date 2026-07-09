@@ -171,10 +171,12 @@ function setupStaticFrontend() {
   if (!fs.existsSync(distDir)) return;
   app.use(express.static(distDir, {
     setHeaders: (res, filePath) => {
-      // Content-hashed build assets never change under their name → cache forever.
-      // Everything else (index.html, manifest, sw.js, icons) must revalidate so
-      // installed PWAs pick up new deploys instead of serving a stale shell.
-      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+      // The app shell must never be cached, or installed PWAs get stuck on an old
+      // build. Content-hashed build assets never change under their name → cache
+      // forever. Everything else (manifest, sw.js, icons) revalidates.
+      if (filePath.endsWith('index.html')) {
+        res.setHeader('Cache-Control', 'no-store');
+      } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       } else {
         res.setHeader('Cache-Control', 'no-cache');
