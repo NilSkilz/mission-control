@@ -83,6 +83,47 @@ router.post('/shopping/clear-checked', (req, res) => {
   res.json({ cleared });
 });
 
+// ---- Lifts (kids ask for a lift, parents accept/deny, first response wins) ----
+
+crud('lifts', 'liftRequests', {
+  creatable: ['createdBy', 'dateTime', 'location', 'lat', 'lng', 'extras', 'note'],
+});
+
+// A parent accepts or denies an open request. First response wins: the atomic
+// UPDATE only fires while status is still 'open', so a second responder gets a 409.
+router.post('/lifts/:id/respond', (req, res) => {
+  const { userId, decision, note } = req.body;
+  if (!['accepted', 'denied'].includes(decision)) {
+    return res.status(400).json({ error: 'decision must be "accepted" or "denied"' });
+  }
+  const actor = userId ? get('users', userId) : null;
+  if (!actor || actor.role !== 'parent') {
+    return res.status(403).json({ error: 'only a parent can respond to a lift request' });
+  }
+  const now = new Date().toISOString();
+  const result = db.prepare(
+    `UPDATE liftRequests
+        SET status = @decision, respondedBy = @userId, respondedAt = @now,
+            responseNote = @note, updatedAt = @now
+      WHERE id = @id AND status = 'open'`
+  ).run({ id: req.params.id, decision, userId, now, note: (note && note.trim()) || null });
+  const row = get('liftRequests', req.params.id);
+  if (!row) return res.status(404).json({ error: 'not found' });
+  if (result.changes === 0) return res.status(409).json({ error: 'already resolved', request: row });
+  res.json(row);
+});
+
+// The requester cancels their own still-open request.
+router.post('/lifts/:id/cancel', (req, res) => {
+  const row = get('liftRequests', req.params.id);
+  if (!row) return res.status(404).json({ error: 'not found' });
+  if (row.createdBy !== req.body.userId) {
+    return res.status(403).json({ error: 'only the requester can cancel' });
+  }
+  if (row.status !== 'open') return res.status(409).json({ error: 'not open', request: row });
+  res.json(update('liftRequests', req.params.id, { status: 'cancelled' }));
+});
+
 // ---- Chore completions (the approval/wallet loop) ----
 
 router.get('/completions', (req, res) => {

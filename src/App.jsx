@@ -6,6 +6,7 @@ import TideHome from './tide/TideHome'
 import TideNotes from './tide/TideNotes'
 import TideCinema from './tide/TideCinema'
 import TideHouse from './tide/TideHouse'
+import TideLifts from './tide/TideLifts'
 import TideJarvis from './tide/TideJarvis'
 import TidePeople from './tide/TidePeople'
 import TideSystem from './tide/TideSystem'
@@ -85,6 +86,7 @@ function AppRoutes() {
       <Route path="/notes" element={<Family><TideNotes /></Family>} />
       <Route path="/cinema" element={<Family><TideCinema /></Family>} />
       <Route path="/house" element={<Family><TideHouse /></Family>} />
+      <Route path="/lifts" element={<Family><TideLifts /></Family>} />
       <Route path="/jarvis" element={<Family><TideJarvis /></Family>} />
       <Route path="/people" element={<Family requireParent><TidePeople /></Family>} />
 

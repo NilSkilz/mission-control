@@ -135,6 +135,24 @@ db.exec(`
     createdAt TEXT NOT NULL,
     updatedAt TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS liftRequests (
+    id TEXT PRIMARY KEY,
+    createdBy TEXT NOT NULL REFERENCES users(id),
+    dateTime TEXT NOT NULL,              -- ISO: when the lift is needed
+    location TEXT NOT NULL,
+    lat REAL,
+    lng REAL,
+    extras TEXT,                         -- e.g. "bike rack"
+    note TEXT,
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','accepted','denied','cancelled')),
+    respondedBy TEXT REFERENCES users(id),
+    respondedAt TEXT,
+    responseNote TEXT,
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_lifts_status ON liftRequests(status);
 `);
 
 // Seed the family on first run (matches the old mock users, plus Tide person colours)

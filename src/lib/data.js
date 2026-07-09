@@ -546,3 +546,14 @@ export function getThisWeekCompletion(completions, choreId) {
     return c.choreId === choreId && completedDate >= weekStart
   })
 }
+
+// ==================== LIFTS ====================
+// Family lift-request board: kids ask, parents accept/deny, first response wins.
+export async function getLifts() { return safeList('/lifts') }
+export async function addLift(lift) { return request('/lifts', { method: 'POST', body: lift }) }
+export async function respondToLift(id, decision, userId, note) {
+  return request(`/lifts/${id}/respond`, { method: 'POST', body: { decision, userId, note } })
+}
+export async function cancelLift(id, userId) {
+  return request(`/lifts/${id}/cancel`, { method: 'POST', body: { userId } })
+}
