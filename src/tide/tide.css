@@ -59,6 +59,7 @@
 /* ============ shell ground + crossfade ==================== */
 .tide-shell {
   min-height: 100vh;
+  min-height: 100dvh; /* track the visible viewport on mobile so the fixed tab bar doesn't drift with the URL bar */
   background: var(--tide-ground);
   color: var(--tide-ink);
   position: relative;
