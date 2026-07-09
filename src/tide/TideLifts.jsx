@@ -3,6 +3,7 @@ import { useUser } from '../context/UserContext'
 import { firstName } from './people'
 import { Label, EmptyHint } from './widgets'
 import { getLifts, addLift, respondToLift, cancelLift, getUsers } from '../lib/data'
+import { getPushState, enablePush, disablePush } from '../lib/push'
 
 const SLOT_MIN = 15   // 15-minute pickup slots
 const LEAD_MIN = 30   // must be at least this far in the future
@@ -57,6 +58,8 @@ export default function TideLifts() {
   const [gps, setGps] = useState('')        // '' | 'locating' | 'ok' | 'error'
   const [error, setError] = useState('')
   const [respNotes, setRespNotes] = useState({}) // per-request parent note
+  const [pushState, setPushState] = useState('unsupported') // unsupported|denied|on|off|working
+  const [pushErr, setPushErr] = useState('')
 
   const reload = useCallback(async () => setLifts(await getLifts()), [])
   const userById = Object.fromEntries(users.map((u) => [u.id, u]))
@@ -70,6 +73,8 @@ export default function TideLifts() {
     })
     return () => { alive = false }
   }, [])
+
+  useEffect(() => { getPushState().then(setPushState) }, [])
 
   // If the day changes and the chosen time is no longer offered, clear it.
   useEffect(() => {
@@ -115,6 +120,14 @@ export default function TideLifts() {
   }
   const cancel = async (r) => { try { await cancelLift(r.id, user.id) } finally { reload() } }
 
+  const togglePush = async () => {
+    setPushErr('')
+    const prev = pushState
+    setPushState('working')
+    try { setPushState(prev === 'on' ? await disablePush() : await enablePush()) }
+    catch (e) { setPushState(prev); setPushErr(e.message) }
+  }
+
   const open = lifts.filter((l) => l.status === 'open').sort((a, b) => a.dateTime.localeCompare(b.dateTime))
   const done = lifts.filter((l) => l.status !== 'open').sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))
 
@@ -122,6 +135,18 @@ export default function TideLifts() {
     <div>
       <div className="tide-greet" style={{ fontSize: 'clamp(24px,5vw,30px)' }}><span className="tide-grad">lifts</span></div>
       <p className="tide-sub" style={{ marginTop: 6 }}>ask for a lift, a grown-up picks it up</p>
+
+      {pushState !== 'unsupported' && (
+        <div style={{ marginTop: 10 }}>
+          <button type="button" onClick={togglePush} className="tide-btn tide-btn-ghost" style={{ padding: '6px 12px', fontSize: 13 }} disabled={pushState === 'working' || pushState === 'denied'}>
+            {pushState === 'on' ? '🔔 alerts on — tap to turn off'
+              : pushState === 'denied' ? '🔕 alerts blocked in browser'
+              : pushState === 'working' ? '…'
+              : '🔔 turn on lift alerts'}
+          </button>
+          {pushErr && <span className="tide-sub" style={{ fontSize: 12, marginLeft: 10 }}>{pushErr}</span>}
+        </div>
+      )}
 
       {loading ? (
         <p className="tide-sub" style={{ marginTop: 18 }}>loading…</p>

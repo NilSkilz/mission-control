@@ -32,3 +32,4 @@ amplify_outputs.json
 
 # Local family data store
 db/family.sqlite*
+db/.vapid.json

@@ -557,3 +557,15 @@ export async function respondToLift(id, decision, userId, note) {
 export async function cancelLift(id, userId) {
   return request(`/lifts/${id}/cancel`, { method: 'POST', body: { userId } })
 }
+
+// ==================== PUSH ====================
+export async function getVapidKey() {
+  const r = await request('/push/key')
+  return r.publicKey
+}
+export async function savePushSubscription(sub) {
+  return request('/push/subscribe', { method: 'POST', body: sub })
+}
+export async function removePushSubscription(endpoint) {
+  return request('/push/unsubscribe', { method: 'POST', body: { endpoint } })
+}

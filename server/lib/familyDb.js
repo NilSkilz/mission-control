@@ -153,6 +153,17 @@ db.exec(`
     updatedAt TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_lifts_status ON liftRequests(status);
+
+  CREATE TABLE IF NOT EXISTS pushSubscriptions (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL REFERENCES users(id),
+    endpoint TEXT NOT NULL UNIQUE,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_push_user ON pushSubscriptions(userId);
 `);
 
 // Seed the family on first run (matches the old mock users, plus Tide person colours)

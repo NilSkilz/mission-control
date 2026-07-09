@@ -3,6 +3,8 @@
 import express from 'express';
 import db, { list, get, create, update, remove } from '../lib/familyDb.js';
 import { getEvents } from '../lib/icsCalendar.js';
+import { randomUUID } from 'crypto';
+import { vapidPublicKey, notifyNewLift, notifyLiftResolved } from '../lib/push.js';
 
 const router = express.Router();
 
@@ -21,7 +23,7 @@ router.get('/calendar', async (req, res) => {
   }
 });
 
-function crud(resource, table, { creatable, updatable }) {
+function crud(resource, table, { creatable, updatable, afterCreate }) {
   router.get(`/${resource}`, (req, res) => res.json(list(table)));
 
   router.get(`/${resource}/:id`, (req, res) => {
@@ -33,7 +35,9 @@ function crud(resource, table, { creatable, updatable }) {
   router.post(`/${resource}`, (req, res) => {
     const data = pick(req.body, creatable);
     try {
-      res.status(201).json(create(table, data));
+      const row = create(table, data);
+      if (afterCreate) Promise.resolve(afterCreate(row, req)).catch((e) => console.error(`${resource} afterCreate:`, e));
+      res.status(201).json(row);
     } catch (e) {
       res.status(400).json({ error: e.message });
     }
@@ -87,6 +91,7 @@ router.post('/shopping/clear-checked', (req, res) => {
 
 crud('lifts', 'liftRequests', {
   creatable: ['createdBy', 'dateTime', 'location', 'lat', 'lng', 'extras', 'note'],
+  afterCreate: (row) => notifyNewLift(row, list('users')),
 });
 
 // A parent accepts or denies an open request. First response wins: the atomic
@@ -110,6 +115,7 @@ router.post('/lifts/:id/respond', (req, res) => {
   const row = get('liftRequests', req.params.id);
   if (!row) return res.status(404).json({ error: 'not found' });
   if (result.changes === 0) return res.status(409).json({ error: 'already resolved', request: row });
+  notifyLiftResolved(row, list('users')).catch((e) => console.error('lift resolve notify:', e));
   res.json(row);
 });
 
@@ -122,6 +128,31 @@ router.post('/lifts/:id/cancel', (req, res) => {
   }
   if (row.status !== 'open') return res.status(409).json({ error: 'not open', request: row });
   res.json(update('liftRequests', req.params.id, { status: 'cancelled' }));
+});
+
+// ---- Web push subscriptions ----
+
+router.get('/push/key', (req, res) => res.json({ publicKey: vapidPublicKey() }));
+
+router.post('/push/subscribe', (req, res) => {
+  const { endpoint, keys } = req.body || {};
+  if (!endpoint || !keys || !keys.p256dh || !keys.auth) {
+    return res.status(400).json({ error: 'invalid subscription' });
+  }
+  const now = new Date().toISOString();
+  db.prepare(`
+    INSERT INTO pushSubscriptions (id, userId, endpoint, p256dh, auth, createdAt, updatedAt)
+    VALUES (@id, @userId, @endpoint, @p256dh, @auth, @now, @now)
+    ON CONFLICT(endpoint) DO UPDATE SET userId = @userId, p256dh = @p256dh, auth = @auth, updatedAt = @now
+  `).run({ id: randomUUID(), userId: req.userId, endpoint, p256dh: keys.p256dh, auth: keys.auth, now });
+  res.status(201).json({ ok: true });
+});
+
+router.post('/push/unsubscribe', (req, res) => {
+  if (req.body && req.body.endpoint) {
+    db.prepare('DELETE FROM pushSubscriptions WHERE endpoint = ?').run(req.body.endpoint);
+  }
+  res.json({ ok: true });
 });
 
 // ---- Chore completions (the approval/wallet loop) ----
