@@ -156,7 +156,7 @@ export default function TideLifts() {
           <div style={{ marginTop: 20, maxWidth: 560 }}>
             <Label>ask for a lift</Label>
             <form onSubmit={submit} className="tide-card" style={{ padding: 14, marginTop: 8, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'flex', gap: 10 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <label style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <span className="tide-lbl">day</span>
                   <input type="date" className="tide-input" style={{ width: '100%', minWidth: 0, boxSizing: 'border-box' }} min={todayStr()} value={date} onChange={(e) => setDate(e.target.value)} />

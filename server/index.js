@@ -169,9 +169,22 @@ async function setupRoutes() {
 function setupStaticFrontend() {
   const distDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist');
   if (!fs.existsSync(distDir)) return;
-  app.use(express.static(distDir));
+  app.use(express.static(distDir, {
+    setHeaders: (res, filePath) => {
+      // Content-hashed build assets never change under their name → cache forever.
+      // Everything else (index.html, manifest, sw.js, icons) must revalidate so
+      // installed PWAs pick up new deploys instead of serving a stale shell.
+      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else {
+        res.setHeader('Cache-Control', 'no-cache');
+      }
+    },
+  }));
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path === '/health' || req.path === '/ws') return next();
+    // The app shell must never be cached, or PWAs get stuck on an old build.
+    res.setHeader('Cache-Control', 'no-store');
     res.sendFile(path.join(distDir, 'index.html'));
   });
   console.log('✓ Serving frontend from dist/');
