@@ -56,6 +56,34 @@
   --tide-glow-blue: rgba(90, 140, 220, 0.16);
 }
 
+/* ---- scrollbars follow the ambient theme -----------------
+   index.css pins a dark track/thumb globally; in day mode that
+   reads as a dark bar against the light ground. Re-scope per theme. */
+[data-tide-theme='day'] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-tide-theme='day'] ::-webkit-scrollbar-thumb {
+  background: rgba(30, 32, 42, 0.18);
+}
+[data-tide-theme='day'] ::-webkit-scrollbar-thumb:hover {
+  background: var(--tide-coral);
+}
+[data-tide-theme='day'] {
+  scrollbar-color: rgba(30, 32, 42, 0.18) transparent; /* firefox */
+}
+[data-tide-theme='night'] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-tide-theme='night'] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+}
+[data-tide-theme='night'] ::-webkit-scrollbar-thumb:hover {
+  background: var(--tide-coral);
+}
+[data-tide-theme='night'] {
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent; /* firefox */
+}
+
 /* ============ shell ground + crossfade ==================== */
 .tide-shell {
   min-height: 100vh;
