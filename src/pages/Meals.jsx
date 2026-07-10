@@ -4,7 +4,7 @@ import { Label, EmptyHint } from '../tide/widgets'
 import { MEAL_TAGS } from '../lib/meals-data'
 import { useUser } from '../context/UserContext'
 import {
-  getMealRecipes, getMeals, setMeal, getShoppingItems, addShoppingItem, addMealRecipe,
+  getMealRecipes, getMeals, setMeal, getShoppingItems, addShoppingItem, addMealRecipe, updateMealRecipe,
 } from '../lib/data'
 
 const DAY_MS = 86400000
@@ -31,8 +31,16 @@ function TagChip({ tag, active, onClick }) {
 
 const EMPTY_FORM = { name: '', serves: '', time: '', note: '', tags: [], ingredients: [] }
 
-function AddMealSheet({ onClose, onSaved }) {
-  const [form, setForm] = useState(EMPTY_FORM)
+function MealSheet({ recipe, onClose, onSaved }) {
+  const editing = !!recipe
+  const [form, setForm] = useState(() => editing ? {
+    name: recipe.name || '',
+    serves: recipe.serves || '',
+    time: recipe.time || '',
+    note: recipe.note || '',
+    tags: recipe.tags || [],
+    ingredients: (recipe.ingredients || []).map((x) => typeof x === 'string' ? { name: x, quantity: null } : x),
+  } : EMPTY_FORM)
   const [ing, setIng] = useState({ name: '', quantity: '' })
   const [saving, setSaving] = useState(false)
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
@@ -52,14 +60,16 @@ function AddMealSheet({ onClose, onSaved }) {
     if (!form.name.trim() || saving) return
     setSaving(true)
     try {
-      await addMealRecipe({
+      const payload = {
         name: form.name.trim(),
         tags: form.tags,
         serves: form.serves.trim() || null,
         time: form.time.trim() || null,
         note: form.note.trim() || null,
         ingredients: form.ingredients,
-      })
+      }
+      if (editing) await updateMealRecipe(recipe.id, payload)
+      else await addMealRecipe(payload)
       await onSaved(form.name.trim())
       onClose()
     } finally {
@@ -70,10 +80,10 @@ function AddMealSheet({ onClose, onSaved }) {
   return (
     <>
       <div className="tide-sheet-backdrop" onClick={onClose} />
-      <div className="tide-sheet tide-sheet--modal" role="dialog" aria-label="Add a meal" style={{ maxHeight: '86vh', overflowY: 'auto' }}>
+      <div className="tide-sheet tide-sheet--modal" role="dialog" aria-label={editing ? 'Edit meal' : 'Add a meal'} style={{ maxHeight: '86vh', overflowY: 'auto' }}>
         <div className="tide-sheet-grip" />
         <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: 14 }}>
-          <div className="tide-greet" style={{ fontSize: 20 }}><span className="tide-grad">new meal</span></div>
+          <div className="tide-greet" style={{ fontSize: 20 }}><span className="tide-grad">{editing ? 'edit meal' : 'new meal'}</span></div>
           <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--tide-faint)', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>×</button>
         </div>
 
@@ -139,7 +149,7 @@ function AddMealSheet({ onClose, onSaved }) {
         <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
           <button onClick={onClose} className="tide-btn tide-btn-ghost" style={{ flex: 1 }}>cancel</button>
           <button onClick={save} className="tide-btn tide-btn-primary" style={{ flex: 1 }} disabled={!form.name.trim() || saving}>
-            {saving ? 'saving…' : 'add meal'}
+            {saving ? 'saving…' : (editing ? 'save changes' : 'add meal')}
           </button>
         </div>
       </div>
@@ -151,6 +161,7 @@ export default function MealsPage() {
   const { user } = useUser()
   const isParent = user?.role === 'parent'
   const [adding, setAdding] = useState(false)
+  const [editing, setEditing] = useState(null)
   const [state, setState] = useState({ loading: true, recipes: [], meals: [] })
   const [planningDate, setPlanningDate] = useState(null)
   const [query, setQuery] = useState('')
@@ -300,6 +311,11 @@ export default function MealsPage() {
                     </button>
                   )}
                   <button onClick={() => addToShopping(r)} className="tide-btn tide-btn-ghost" style={{ fontSize: 12, padding: '6px 12px' }}>+ shopping</button>
+                  {isParent && (
+                    <button onClick={() => setEditing(r)} aria-label={`edit ${r.name}`} title="edit meal" className="tide-btn tide-btn-ghost" style={{ marginLeft: 'auto', fontSize: 13, padding: '6px 10px', lineHeight: 1 }}>
+                      ✏️
+                    </button>
+                  )}
                 </div>
               </div>
             )
@@ -308,9 +324,17 @@ export default function MealsPage() {
       </div>
 
       {adding && (
-        <AddMealSheet
+        <MealSheet
           onClose={() => setAdding(false)}
           onSaved={async (name) => { await reload(); flash(`${name} added to the recipe book`) }}
+        />
+      )}
+
+      {editing && (
+        <MealSheet
+          recipe={editing}
+          onClose={() => setEditing(null)}
+          onSaved={async (name) => { await reload(); flash(`${name} updated`) }}
         />
       )}
 
