@@ -90,8 +90,8 @@ function AppRoutes() {
       <Route path="/jarvis" element={<Family><TideJarvis /></Family>} />
       <Route path="/people" element={<Family requireParent><TidePeople /></Family>} />
 
-      {/* system — Tide-styled launcher (parent-only), legacy dashboard moved under it */}
-      <Route path="/system" element={<Family requireParent><TideSystem /></Family>} />
+      {/* system — Tide-styled launcher (all users; services list is role-scoped server-side). Legacy dashboards under it stay parent-only. */}
+      <Route path="/system" element={<Family><TideSystem /></Family>} />
       <Route path="/system/dashboard" element={<System><SimpleDemo /></System>} />
       <Route path="/system/agents" element={<System><AgentsPage /></System>} />
       <Route path="/system/admin" element={<System><SystemAdminPage /></System>} />

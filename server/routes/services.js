@@ -3,15 +3,17 @@
 // still reads as "up" when its port is open.
 import express from 'express'
 import net from 'node:net'
+import db from '../lib/familyDb.js'
 
 const router = express.Router()
 
 // host/port are LAN (for the probe); url is where the browser actually goes.
+// `family: true` = shown to everyone (kids included); the rest are parents-only.
 const SERVICES = [
-  { key: 'vault', name: 'Vaultwarden', emoji: '🔐', desc: 'Family password vault', url: 'https://vault.cracky.co.uk', host: '192.168.1.17', port: 8080 },
-  { key: 'plex', name: 'Plex', emoji: '🎬', desc: 'Films & TV', url: 'https://plex.cracky.co.uk', host: '192.168.1.3', port: 32400 },
-  { key: 'seerr', name: 'Requests', emoji: '🍿', desc: 'Ask for new films/shows (Seerr)', url: 'https://seerr.cracky.co.uk', host: '192.168.1.12', port: 5055 },
-  { key: 'ha', name: 'Home Assistant', emoji: '🏠', desc: 'Whole-house automation', url: 'https://ha.cracky.co.uk', host: '192.168.1.4', port: 8123 },
+  { key: 'vault', name: 'Vaultwarden', emoji: '🔐', desc: 'Family password vault', url: 'https://vault.cracky.co.uk', host: '192.168.1.17', port: 8080, family: true },
+  { key: 'plex', name: 'Plex', emoji: '🎬', desc: 'Films & TV', url: 'https://plex.cracky.co.uk', host: '192.168.1.3', port: 32400, family: true },
+  { key: 'seerr', name: 'Requests', emoji: '🍿', desc: 'Ask for new films/shows (Seerr)', url: 'https://seerr.cracky.co.uk', host: '192.168.1.12', port: 5055, family: true },
+  { key: 'ha', name: 'Home Assistant', emoji: '🏠', desc: 'Whole-house automation', url: 'https://ha.cracky.co.uk', host: '192.168.1.4', port: 8123, family: true },
   { key: 'sonarr', name: 'Sonarr', emoji: '📺', desc: 'TV library', url: 'https://sonarr.cracky.co.uk', host: '192.168.1.8', port: 8989 },
   { key: 'radarr', name: 'Radarr', emoji: '🎞️', desc: 'Film library', url: 'https://radarr.cracky.co.uk', host: '192.168.1.9', port: 7878 },
   { key: 'prowlarr', name: 'Prowlarr', emoji: '🔎', desc: 'Indexer manager', url: 'https://prowlarr.cracky.co.uk', host: '192.168.1.5', port: 9696 },
@@ -39,7 +41,11 @@ function tcpCheck(host, port, timeout = 2500) {
 }
 
 router.get('/', async (req, res) => {
-  const results = await Promise.all(SERVICES.map(async (s) => {
+  // parents see everything; everyone else sees only the family-facing services.
+  const me = db.prepare('SELECT role FROM users WHERE id = ?').get(req.userId)
+  const isParent = me?.role === 'parent'
+  const scoped = isParent ? SERVICES : SERVICES.filter((s) => s.family)
+  const results = await Promise.all(scoped.map(async (s) => {
     const { ok, ms } = await tcpCheck(s.host, s.port)
     const { host, port, ...pub } = s // don't leak internal host/port to the client
     return { ...pub, ok, ms }

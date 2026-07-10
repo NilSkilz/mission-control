@@ -36,6 +36,8 @@ const NAV = [
   { key: 'cinema', label: 'cinema', to: '/cinema', icon: 'cinema' },
   { key: 'house', label: 'house', to: '/house', icon: 'house' },
   { key: 'lifts', label: 'lifts', to: '/lifts', icon: 'lift' },
+  // system is for everyone now (kids see a curated set of services); people stays parent-only.
+  { key: 'system', label: 'system', to: '/system', icon: 'system' },
 ]
 
 // Mobile keeps the daily-use screens as bottom tabs; the rest live behind "More".
@@ -45,7 +47,6 @@ const OVERFLOW_NAV = NAV.filter((i) => !PRIMARY_KEYS.includes(i.key))
 // Parent-only management screens — sheet only.
 const PARENT_NAV = [
   { key: 'people', label: 'people', to: '/people', icon: 'people' },
-  { key: 'system', label: 'system', to: '/system', icon: 'system' },
 ]
 
 function currentKey(pathname) {
@@ -141,10 +142,7 @@ export default function TideShell({ children }) {
               </Link>
             ))}
             {isParent && (
-              <>
-                <Link to="/people" className={active === 'people' ? 'on' : ''}>people</Link>
-                <Link to="/system" className={active === 'system' ? 'on' : ''}>system</Link>
-              </>
+              <Link to="/people" className={active === 'people' ? 'on' : ''}>people</Link>
             )}
           </nav>
 

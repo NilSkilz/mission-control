@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Label, EmptyHint } from './widgets'
 import { getServices, getMediaSummary } from '../lib/data'
+import { useUser } from '../context/UserContext'
 
 // small live stat per media service, pulled from /api/media/summary
 function mediaStat(key, sum) {
@@ -37,6 +38,8 @@ function ServiceCard({ s, sum }) {
 }
 
 export default function TideSystem() {
+  const { user } = useUser()
+  const isParent = user?.role === 'parent'
   const [services, setServices] = useState([])
   const [sum, setSum] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -57,7 +60,7 @@ export default function TideSystem() {
     <div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
         <div className="tide-greet" style={{ fontSize: 'clamp(24px,5vw,30px)' }}><span className="tide-grad">system</span></div>
-        <Link to="/system/dashboard" className="tide-pill" style={{ marginLeft: 'auto' }}>▦ dashboard</Link>
+        {isParent && <Link to="/system/dashboard" className="tide-pill" style={{ marginLeft: 'auto' }}>▦ dashboard</Link>}
       </div>
       <p className="tide-sub" style={{ marginTop: 6 }}>quick links to everything running at home</p>
 
@@ -73,12 +76,14 @@ export default function TideSystem() {
               {hosted.map((s) => <ServiceCard key={s.key} s={s} sum={sum} />)}
             </div>
           </div>
-          <div style={{ marginTop: 24 }}>
-            <Label>on the network (home only)</Label>
-            <div className="tide-service-grid" style={{ marginTop: 8 }}>
-              {network.map((s) => <ServiceCard key={s.key} s={s} sum={sum} />)}
+          {network.length > 0 && (
+            <div style={{ marginTop: 24 }}>
+              <Label>on the network (home only)</Label>
+              <div className="tide-service-grid" style={{ marginTop: 8 }}>
+                {network.map((s) => <ServiceCard key={s.key} s={s} sum={sum} />)}
+              </div>
             </div>
-          </div>
+          )}
         </>
       )}
     </div>
