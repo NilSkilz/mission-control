@@ -4,13 +4,16 @@
 //
 // `allow` is 'all' | 'parents' | an array of usernames.
 // Seeded from what actually exists in the house right now (living + snug light
-// switches). Add a kid's bedroom light here once it's in HA, e.g.:
+// switches). Each physical switch exposes three HA entities: `*_leds` (the
+// indicator LEDs on the plate), `*_swtich_state` (the wall rocker position) and
+// `switch.*_button` — the relay that actually turns the light on/off. That last
+// one is what we control. Add a kid's bedroom light here once it's in HA, e.g.:
 //   { entity_id: 'light.logan_bedroom', label: 'bedroom light', room: 'Logan',
 //     domain: 'light', icon: '💡', allow: ['logan'] }
 
 export const HOUSE_CONTROLS = [
-  { entity_id: 'light.living_light_switch_leds', label: 'living room', room: 'Downstairs', domain: 'light', icon: '🛋️', allow: 'all' },
-  { entity_id: 'light.snug_light_switch_leds', label: 'snug', room: 'Downstairs', domain: 'light', icon: '📺', allow: 'all' },
+  { entity_id: 'switch.living_light_switch_button', label: 'living room', room: 'Downstairs', domain: 'switch', icon: '🛋️', allow: 'all' },
+  { entity_id: 'switch.snug_light_switch_button', label: 'snug', room: 'Downstairs', domain: 'switch', icon: '📺', allow: 'all' },
 ]
 
 // Optional: an HA temperature sensor entity id to show as the house temperature.

@@ -59,8 +59,8 @@ export default function TideHouse() {
 
   const goodnight = async () => {
     setBusy('goodnight')
-    for (const c of controls.filter((c) => c.domain === 'light')) {
-      try { await haCall('light', 'turn_off', c.entity_id) } catch { /* keep going */ }
+    for (const c of controls) {
+      try { await haCall(c.domain, 'turn_off', c.entity_id) } catch { /* keep going */ }
     }
     setBusy(null)
     setTimeout(load, 800)
