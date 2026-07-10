@@ -8,6 +8,7 @@ const router = express.Router()
 
 // host/port are LAN (for the probe); url is where the browser actually goes.
 const SERVICES = [
+  { key: 'vault', name: 'Vaultwarden', emoji: '🔐', desc: 'Family password vault', url: 'https://vault.cracky.co.uk', host: '192.168.1.17', port: 8080 },
   { key: 'plex', name: 'Plex', emoji: '🎬', desc: 'Films & TV', url: 'https://plex.cracky.co.uk', host: '192.168.1.3', port: 32400 },
   { key: 'seerr', name: 'Requests', emoji: '🍿', desc: 'Ask for new films/shows (Seerr)', url: 'https://seerr.cracky.co.uk', host: '192.168.1.12', port: 5055 },
   { key: 'ha', name: 'Home Assistant', emoji: '🏠', desc: 'Whole-house automation', url: 'https://ha.cracky.co.uk', host: '192.168.1.4', port: 8123 },
