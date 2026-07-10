@@ -89,8 +89,8 @@ export default function TideCinema() {
   const kindTag = (k) => (k === 'tv' ? '📺 tv' : '🎬 film')
 
   return (
-    // Cinema lives in the night theme permanently — lamplight is always right here.
-    <div data-tide-theme="night" style={{ background: 'var(--tide-ground)', borderRadius: 20, padding: 'clamp(16px,3vw,24px)', margin: '-2px', position: 'relative', overflow: 'hidden' }}>
+    // Cinema follows the ambient theme like every other page — light in day, lamplit at night.
+    <div style={{ background: 'var(--tide-ground)', borderRadius: 20, padding: 'clamp(16px,3vw,24px)', margin: '-2px', position: 'relative', overflow: 'hidden' }}>
       <div className="tide-glow" style={{ position: 'absolute' }} />
       <div style={{ position: 'relative' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
