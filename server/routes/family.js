@@ -288,7 +288,9 @@ router.get('/recipes/:id', (req, res) => {
 
 router.post('/recipes', (req, res) => {
   try {
-    res.status(201).json(serveRecipe(create('mealRecipes', storeRecipe(req.body))));
+    const data = storeRecipe(req.body);
+    if (!data.category) data.category = 'Midweek Mains';
+    res.status(201).json(serveRecipe(create('mealRecipes', data)));
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
