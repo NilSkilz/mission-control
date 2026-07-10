@@ -14,6 +14,7 @@ const SERVICES = [
   { key: 'plex', name: 'Plex', emoji: '🎬', desc: 'Films & TV', url: 'https://plex.cracky.co.uk', host: '192.168.1.3', port: 32400, family: true },
   { key: 'seerr', name: 'Requests', emoji: '🍿', desc: 'Ask for new films/shows (Seerr)', url: 'https://seerr.cracky.co.uk', host: '192.168.1.12', port: 5055, family: true },
   { key: 'ha', name: 'Home Assistant', emoji: '🏠', desc: 'Whole-house automation', url: 'https://ha.cracky.co.uk', host: '192.168.1.4', port: 8123, family: true },
+  { key: 'paperless', name: 'Paperless', emoji: '📄', desc: 'Scanned documents & paperwork', url: 'http://192.168.1.18:8000', host: '192.168.1.18', port: 8000, family: true, lan: true },
   { key: 'sonarr', name: 'Sonarr', emoji: '📺', desc: 'TV library', url: 'https://sonarr.cracky.co.uk', host: '192.168.1.8', port: 8989 },
   { key: 'radarr', name: 'Radarr', emoji: '🎞️', desc: 'Film library', url: 'https://radarr.cracky.co.uk', host: '192.168.1.9', port: 7878 },
   { key: 'prowlarr', name: 'Prowlarr', emoji: '🔎', desc: 'Indexer manager', url: 'https://prowlarr.cracky.co.uk', host: '192.168.1.5', port: 9696 },
@@ -24,6 +25,7 @@ const SERVICES = [
   { key: 'npm', name: 'Nginx Proxy Manager', emoji: '🔀', desc: 'Reverse proxy admin', url: 'http://192.168.1.14:81', host: '192.168.1.14', port: 81, lan: true },
   { key: 'tdarr', name: 'Tdarr', emoji: '🗜️', desc: 'Transcoding', url: 'http://192.168.1.13:8265', host: '192.168.1.13', port: 8265, lan: true },
   { key: 'unifi', name: 'UniFi (router)', emoji: '📡', desc: 'Network / Dream Machine', url: 'https://192.168.1.1', host: '192.168.1.1', port: 443, lan: true },
+  { key: 'uptimekuma', name: 'Uptime Kuma', emoji: '📟', desc: 'Service uptime monitor', url: 'http://192.168.1.19:3001', host: '192.168.1.19', port: 3001, lan: true },
 ]
 
 function tcpCheck(host, port, timeout = 2500) {
