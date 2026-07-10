@@ -2,8 +2,9 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Label, EmptyHint } from '../tide/widgets'
 import { MEAL_TAGS } from '../lib/meals-data'
+import { useUser } from '../context/UserContext'
 import {
-  getMealRecipes, getMeals, setMeal, getShoppingItems, addShoppingItem,
+  getMealRecipes, getMeals, setMeal, getShoppingItems, addShoppingItem, addMealRecipe,
 } from '../lib/data'
 
 const DAY_MS = 86400000
@@ -28,7 +29,128 @@ function TagChip({ tag, active, onClick }) {
   )
 }
 
+const EMPTY_FORM = { name: '', serves: '', time: '', note: '', tags: [], ingredients: [] }
+
+function AddMealSheet({ onClose, onSaved }) {
+  const [form, setForm] = useState(EMPTY_FORM)
+  const [ing, setIng] = useState({ name: '', quantity: '' })
+  const [saving, setSaving] = useState(false)
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
+
+  const toggleTag = (t) => setForm((f) => ({
+    ...f, tags: f.tags.includes(t) ? f.tags.filter((x) => x !== t) : [...f.tags, t],
+  }))
+  const addIng = () => {
+    const name = ing.name.trim()
+    if (!name) return
+    setForm((f) => ({ ...f, ingredients: [...f.ingredients, { name, quantity: ing.quantity.trim() || null }] }))
+    setIng({ name: '', quantity: '' })
+  }
+  const removeIng = (i) => setForm((f) => ({ ...f, ingredients: f.ingredients.filter((_, idx) => idx !== i) }))
+
+  const save = async () => {
+    if (!form.name.trim() || saving) return
+    setSaving(true)
+    try {
+      await addMealRecipe({
+        name: form.name.trim(),
+        tags: form.tags,
+        serves: form.serves.trim() || null,
+        time: form.time.trim() || null,
+        note: form.note.trim() || null,
+        ingredients: form.ingredients,
+      })
+      await onSaved(form.name.trim())
+      onClose()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <>
+      <div className="tide-sheet-backdrop" onClick={onClose} />
+      <div className="tide-sheet" role="dialog" aria-label="Add a meal" style={{ maxWidth: 560, margin: '0 auto', maxHeight: '86vh', overflowY: 'auto' }}>
+        <div className="tide-sheet-grip" />
+        <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: 14 }}>
+          <div className="tide-greet" style={{ fontSize: 20 }}><span className="tide-grad">new meal</span></div>
+          <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--tide-faint)', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>×</button>
+        </div>
+
+        <Label>name</Label>
+        <input className="tide-input" style={{ width: '100%', marginTop: 6 }} placeholder="e.g. chicken fajitas" value={form.name} autoFocus onChange={(e) => set('name', e.target.value)} />
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+          <div style={{ flex: 1 }}>
+            <Label>serves</Label>
+            <input className="tide-input" style={{ width: '100%', marginTop: 6 }} placeholder="4" value={form.serves} onChange={(e) => set('serves', e.target.value)} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <Label>time</Label>
+            <input className="tide-input" style={{ width: '100%', marginTop: 6 }} placeholder="30 mins" value={form.time} onChange={(e) => set('time', e.target.value)} />
+          </div>
+        </div>
+
+        <div style={{ marginTop: 12 }}>
+          <Label>tags</Label>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+            {Object.entries(MEAL_TAGS).map(([id, meta]) => {
+              const active = form.tags.includes(id)
+              return (
+                <button key={id} onClick={() => toggleTag(id)} className="tide-btn" style={{
+                  padding: '4px 10px', fontSize: 12, borderRadius: 999,
+                  border: `1px solid ${active ? 'var(--tide-accent-ink)' : 'var(--tide-hair)'}`,
+                  background: active ? 'rgba(240,140,90,0.12)' : 'transparent',
+                  color: active ? 'var(--tide-accent-ink)' : 'var(--tide-muted)',
+                }}>{meta.emoji} {id}</button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div style={{ marginTop: 12 }}>
+          <Label>note</Label>
+          <input className="tide-input" style={{ width: '100%', marginTop: 6 }} placeholder="e.g. the boys' favourite" value={form.note} onChange={(e) => set('note', e.target.value)} />
+        </div>
+
+        <div style={{ marginTop: 12 }}>
+          <Label>ingredients ({form.ingredients.length})</Label>
+          {form.ingredients.length > 0 && (
+            <ul style={{ margin: '8px 0 0', paddingLeft: 0, listStyle: 'none' }}>
+              {form.ingredients.map((x, i) => (
+                <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, padding: '4px 0', color: 'var(--tide-muted)' }}>
+                  <span style={{ flex: 1 }}>{x.name}{x.quantity ? ` · ${x.quantity}` : ''}</span>
+                  <button onClick={() => removeIng(i)} style={{ background: 'none', border: 'none', color: 'var(--tide-faint)', cursor: 'pointer', fontSize: 16 }}>×</button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <input className="tide-input" style={{ flex: 1 }} placeholder="add ingredient…" value={ing.name}
+              onChange={(e) => setIng((s) => ({ ...s, name: e.target.value }))}
+              onKeyDown={(e) => e.key === 'Enter' && addIng()} />
+            <input className="tide-input" style={{ width: 90 }} placeholder="qty" value={ing.quantity}
+              onChange={(e) => setIng((s) => ({ ...s, quantity: e.target.value }))}
+              onKeyDown={(e) => e.key === 'Enter' && addIng()} />
+            <button onClick={addIng} className="tide-btn tide-btn-ghost" style={{ padding: '6px 12px' }} disabled={!ing.name.trim()}>+</button>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+          <button onClick={onClose} className="tide-btn tide-btn-ghost" style={{ flex: 1 }}>cancel</button>
+          <button onClick={save} className="tide-btn tide-btn-primary" style={{ flex: 1 }} disabled={!form.name.trim() || saving}>
+            {saving ? 'saving…' : 'add meal'}
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
 export default function MealsPage() {
+  const { user } = useUser()
+  const isParent = user?.role === 'parent'
+  const [adding, setAdding] = useState(false)
   const [state, setState] = useState({ loading: true, recipes: [], meals: [] })
   const [planningDate, setPlanningDate] = useState(null)
   const [query, setQuery] = useState('')
@@ -132,7 +254,14 @@ export default function MealsPage() {
 
       {/* recipe book */}
       <div style={{ marginTop: 26 }}>
-        <Label>recipe book · {state.recipes.length} meals</Label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Label>recipe book · {state.recipes.length} meals</Label>
+          {isParent && (
+            <button onClick={() => setAdding(true)} className="tide-btn tide-btn-primary" style={{ marginLeft: 'auto', fontSize: 12, padding: '6px 12px' }}>
+              + new meal
+            </button>
+          )}
+        </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', margin: '10px 0' }}>
           <input className="tide-input" style={{ flex: '1 1 200px', maxWidth: 300 }} placeholder="search meals…" value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
@@ -177,6 +306,13 @@ export default function MealsPage() {
           })}
         </div>
       </div>
+
+      {adding && (
+        <AddMealSheet
+          onClose={() => setAdding(false)}
+          onSaved={async (name) => { await reload(); flash(`${name} added to the recipe book`) }}
+        />
+      )}
 
       {toast && (
         <div style={{ position: 'fixed', bottom: 84, left: '50%', transform: 'translateX(-50%)', zIndex: 60, background: 'var(--tide-grad-135)', color: '#fff', padding: '9px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600, boxShadow: '0 8px 24px -8px rgba(0,0,0,0.4)' }}>
