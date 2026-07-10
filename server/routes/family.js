@@ -163,6 +163,19 @@ router.post('/lifts/:id/respond', (req, res) => {
   res.json(updated);
 });
 
+// Mark an accepted lift as arrived (picked up) — clears it from the active view.
+// The requester or any parent can tap it.
+router.post('/lifts/:id/arrived', (req, res) => {
+  const row = get('liftRequests', req.params.id);
+  if (!row) return res.status(404).json({ error: 'not found' });
+  const actor = req.body.userId ? get('users', req.body.userId) : null;
+  if (!actor || (actor.id !== row.createdBy && actor.role !== 'parent')) {
+    return res.status(403).json({ error: 'only the requester or a parent can mark arrived' });
+  }
+  if (row.status !== 'accepted') return res.status(409).json({ error: 'not accepted', request: row });
+  res.json(update('liftRequests', req.params.id, { status: 'arrived' }));
+});
+
 // The requester cancels their own still-open request.
 router.post('/lifts/:id/cancel', (req, res) => {
   const row = get('liftRequests', req.params.id);

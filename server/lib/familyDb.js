@@ -145,7 +145,7 @@ db.exec(`
     lng REAL,
     extras TEXT,                         -- e.g. "bike rack"
     note TEXT,
-    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','accepted','denied','cancelled')),
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','accepted','denied','cancelled','arrived')),
     respondedBy TEXT REFERENCES users(id),
     respondedAt TEXT,
     responseNote TEXT,
@@ -227,6 +227,45 @@ if (db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='film
 if (db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='liftRequests'").get()
     && !db.prepare('PRAGMA table_info(liftRequests)').all().some((c) => c.name === 'deniedBy')) {
   db.exec('ALTER TABLE liftRequests ADD COLUMN deniedBy TEXT');
+}
+
+// An accepted lift can now be marked 'arrived' (picked up) to clear it from the
+// active view. SQLite can't ALTER a CHECK constraint, so rebuild the table when
+// the existing one still forbids 'arrived'.
+{
+  const liftDef = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='liftRequests'").get();
+  if (liftDef && !liftDef.sql.includes("'arrived'")) {
+    db.exec(`
+      PRAGMA foreign_keys=OFF;
+      BEGIN TRANSACTION;
+      CREATE TABLE liftRequests_new (
+        id TEXT PRIMARY KEY,
+        createdBy TEXT NOT NULL REFERENCES users(id),
+        dateTime TEXT NOT NULL,
+        location TEXT NOT NULL,
+        lat REAL,
+        lng REAL,
+        extras TEXT,
+        note TEXT,
+        status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','accepted','denied','cancelled','arrived')),
+        respondedBy TEXT REFERENCES users(id),
+        respondedAt TEXT,
+        responseNote TEXT,
+        deniedBy TEXT,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL
+      );
+      INSERT INTO liftRequests_new
+        SELECT id, createdBy, dateTime, location, lat, lng, extras, note, status,
+               respondedBy, respondedAt, responseNote, deniedBy, createdAt, updatedAt
+          FROM liftRequests;
+      DROP TABLE liftRequests;
+      ALTER TABLE liftRequests_new RENAME TO liftRequests;
+      CREATE INDEX IF NOT EXISTS idx_lifts_status ON liftRequests(status);
+      COMMIT;
+      PRAGMA foreign_keys=ON;
+    `);
+  }
 }
 
 // Add passwordHash for real server-side auth (was a client-side hardcoded map).

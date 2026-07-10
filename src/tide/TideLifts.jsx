@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useUser } from '../context/UserContext'
 import { firstName } from './people'
 import { Label, EmptyHint } from './widgets'
-import { getLifts, addLift, respondToLift, cancelLift, getUsers } from '../lib/data'
+import { getLifts, addLift, respondToLift, cancelLift, arrivedLift, getUsers } from '../lib/data'
 import { getPushState, enablePush, disablePush } from '../lib/push'
 
 const SLOT_MIN = 15   // 15-minute pickup slots
@@ -38,8 +38,19 @@ function whenLabel(iso) {
 
 const STATUS = {
   accepted: { label: 'on its way ✓', color: 'var(--p-logan)' },
+  arrived: { label: 'arrived ✓', color: 'var(--tide-faint)' },
   denied: { label: 'not this time', color: 'var(--tide-faint)' },
   cancelled: { label: 'cancelled', color: 'var(--tide-faint)' },
+}
+
+// An accepted lift counts as "on its way" only up to the end of its pickup day.
+// After that it's treated as done, so stale lifts fall out of the active state
+// on their own even if nobody taps "arrived".
+function stillOnItsWay(r) {
+  if (r.status !== 'accepted') return false
+  const pickup = new Date(r.dateTime)
+  const endOfDay = new Date(pickup.getFullYear(), pickup.getMonth(), pickup.getDate(), 23, 59, 59)
+  return new Date() <= endOfDay
 }
 
 export default function TideLifts() {
@@ -119,6 +130,7 @@ export default function TideLifts() {
     try { await respondToLift(r.id, decision, user.id, respNotes[r.id]) } finally { reload() }
   }
   const cancel = async (r) => { try { await cancelLift(r.id, user.id) } finally { reload() } }
+  const markArrived = async (r) => { try { await arrivedLift(r.id, user.id) } finally { reload() } }
 
   const togglePush = async () => {
     setPushErr('')
@@ -259,16 +271,23 @@ export default function TideLifts() {
               {done.slice(0, 12).map((r) => {
                 const who = userById[r.createdBy]
                 const by = userById[r.respondedBy]
-                const st = STATUS[r.status] || { label: r.status, color: 'var(--tide-faint)' }
+                const active = stillOnItsWay(r)
+                // A same-day accepted lift is "on its way"; once its day has passed
+                // it reads as arrived even if nobody tapped the button.
+                const st = active ? STATUS.accepted : (STATUS[r.status] || { label: r.status, color: 'var(--tide-faint)' })
+                const canClear = active && (isParent || r.createdBy === user.id)
                 return (
-                  <div key={r.id} className="tide-card" style={{ padding: '10px 14px', marginTop: 8, opacity: r.status === 'accepted' ? 1 : 0.6 }}>
+                  <div key={r.id} className="tide-card" style={{ padding: '10px 14px', marginTop: 8, opacity: active ? 1 : 0.6 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
                       <span style={{ fontWeight: 700 }}>{who ? firstName(who) : 'someone'}</span>
                       <span className="tide-sub" style={{ fontSize: 12 }}>{whenLabel(r.dateTime)} · {r.location}</span>
                       <span style={{ marginLeft: 'auto', fontWeight: 700, fontSize: 13, color: st.color }}>{st.label}</span>
                     </div>
-                    {r.status === 'accepted' && by && <div className="tide-sub" style={{ fontSize: 12, marginTop: 2 }}>{firstName(by)} is driving{r.responseNote ? ` — “${r.responseNote}”` : ''}</div>}
+                    {r.status === 'accepted' && by && <div className="tide-sub" style={{ fontSize: 12, marginTop: 2 }}>{firstName(by)} {active ? 'is driving' : 'drove'}{r.responseNote ? ` — “${r.responseNote}”` : ''}</div>}
                     {r.status === 'denied' && r.responseNote && <div className="tide-sub" style={{ fontSize: 12, marginTop: 2 }}>“{r.responseNote}”</div>}
+                    {canClear && (
+                      <button onClick={() => markArrived(r)} className="tide-btn tide-btn-ghost" style={{ marginTop: 8, padding: '6px 12px', fontSize: 13 }}>arrived — clear</button>
+                    )}
                   </div>
                 )
               })}

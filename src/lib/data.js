@@ -557,6 +557,9 @@ export async function respondToLift(id, decision, userId, note) {
 export async function cancelLift(id, userId) {
   return request(`/lifts/${id}/cancel`, { method: 'POST', body: { userId } })
 }
+export async function arrivedLift(id, userId) {
+  return request(`/lifts/${id}/arrived`, { method: 'POST', body: { userId } })
+}
 
 // ==================== PUSH ====================
 export async function getVapidKey() {
