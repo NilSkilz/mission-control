@@ -65,7 +65,7 @@ export default function ShoppingPage() {
           <>
             <div style={{ display: 'flex', alignItems: 'center', marginTop: 16 }}>
               <Label style={{ margin: 0 }}>in the basket</Label>
-              <button onClick={clearChecked} className="tide-btn tide-btn-ghost" style={{ marginLeft: 'auto', fontSize: 12, padding: '6px 13px' }}>clear got ({done.length})</button>
+              <button onClick={clearChecked} className="tide-btn tide-btn-ghost" style={{ marginLeft: 'auto', fontSize: 12, padding: '6px 13px' }}>clear ({done.length})</button>
             </div>
             {done.map((item) => (
               <div key={item.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '7px 0', fontSize: 15, opacity: 0.5 }}>
