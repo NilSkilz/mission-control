@@ -23,7 +23,6 @@ const SERVICES = [
   { key: 'proxmox', name: 'Proxmox', emoji: '🧰', desc: 'Hypervisor / all the VMs', url: 'https://192.168.1.2:8006', host: '192.168.1.2', port: 8006, lan: true },
   { key: 'npm', name: 'Nginx Proxy Manager', emoji: '🔀', desc: 'Reverse proxy admin', url: 'http://192.168.1.14:81', host: '192.168.1.14', port: 81, lan: true },
   { key: 'tdarr', name: 'Tdarr', emoji: '🗜️', desc: 'Transcoding', url: 'http://192.168.1.13:8265', host: '192.168.1.13', port: 8265, lan: true },
-  { key: 'homepage', name: 'Homepage', emoji: '📋', desc: 'Old services dashboard', url: 'http://192.168.1.10:3000', host: '192.168.1.10', port: 3000, lan: true },
   { key: 'unifi', name: 'UniFi (router)', emoji: '📡', desc: 'Network / Dream Machine', url: 'https://192.168.1.1', host: '192.168.1.1', port: 443, lan: true },
 ]
 
