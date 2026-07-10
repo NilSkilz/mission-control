@@ -312,8 +312,11 @@ export default function MealsPage() {
                   )}
                   <button onClick={() => addToShopping(r)} className="tide-btn tide-btn-ghost" style={{ fontSize: 12, padding: '6px 12px' }}>+ shopping</button>
                   {isParent && (
-                    <button onClick={() => setEditing(r)} aria-label={`edit ${r.name}`} title="edit meal" className="tide-btn tide-btn-ghost" style={{ marginLeft: 'auto', fontSize: 13, padding: '6px 10px', lineHeight: 1 }}>
-                      ✏️
+                    <button onClick={() => setEditing(r)} aria-label={`edit ${r.name}`} title="edit meal" style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(148,163,184,0.7)', opacity: 0.75 }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                      </svg>
                     </button>
                   )}
                 </div>
