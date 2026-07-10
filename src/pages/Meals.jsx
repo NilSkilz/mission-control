@@ -70,7 +70,7 @@ function AddMealSheet({ onClose, onSaved }) {
   return (
     <>
       <div className="tide-sheet-backdrop" onClick={onClose} />
-      <div className="tide-sheet" role="dialog" aria-label="Add a meal" style={{ maxWidth: 560, margin: '0 auto', maxHeight: '86vh', overflowY: 'auto' }}>
+      <div className="tide-sheet tide-sheet--modal" role="dialog" aria-label="Add a meal" style={{ maxHeight: '86vh', overflowY: 'auto' }}>
         <div className="tide-sheet-grip" />
         <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: 14 }}>
           <div className="tide-greet" style={{ fontSize: 20 }}><span className="tide-grad">new meal</span></div>
