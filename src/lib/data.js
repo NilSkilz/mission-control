@@ -399,6 +399,15 @@ export async function getMediaSummary() {
   } catch { return null }
 }
 
+// At-a-glance host + media-drive stats for the System tab. { host, media } or null.
+export async function getSystemOverview() {
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/system/overview`, { headers: authHeaders() })
+    if (!res.ok) return null
+    return (await res.json()).data || null
+  } catch { return null }
+}
+
 // ==================== JARVIS CHAT ====================
 
 export async function askJarvis(userId, message) {

@@ -139,6 +139,47 @@ router.get('/server', async (req, res) => {
   }
 })
 
+// GET /api/system/overview - at-a-glance host + media-drive stats for the System tab
+// host  : CPU%, load, RAM, CPU temp, uptime — from the Proxmox host via a
+//         read-only forced-command SSH key (see .env HOST_STATS_*).
+// media : the movie/TV drive free/total — from Radarr's diskspace API (/media mount).
+router.get('/overview', async (req, res) => {
+  const out = { host: null, media: null }
+
+  // --- host stats over the locked-down SSH channel ---
+  const target = process.env.HOST_STATS_SSH || 'root@192.168.1.2'
+  const key = process.env.HOST_STATS_KEY || '/opt/mission-control/.ssh/hoststats'
+  const kh = process.env.HOST_STATS_KNOWN_HOSTS || '/opt/mission-control/.ssh/known_hosts'
+  try {
+    const cmd = `ssh -i ${key} -o UserKnownHostsFile=${kh} -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=6 ${target} stats`
+    const { stdout } = await execAsync(cmd, { timeout: 9000 })
+    out.host = JSON.parse(stdout.trim())
+  } catch (error) {
+    out.host = { error: 'host unreachable' }
+  }
+
+  // --- media drive via Radarr (falls back to Sonarr); both mount the same /media ---
+  const radarr = process.env.RADARR_URL || 'http://192.168.1.9:7878'
+  const sonarr = process.env.SONARR_URL || 'http://192.168.1.8:8989'
+  const sources = [
+    { url: `${radarr}/api/v3/diskspace`, key: process.env.RADARR_API_KEY },
+    { url: `${sonarr}/api/v3/diskspace`, key: process.env.SONARR_API_KEY },
+  ]
+  for (const s of sources) {
+    if (!s.key) continue
+    try {
+      const { data } = await axios.get(s.url, { timeout: 6000, headers: { 'X-Api-Key': s.key } })
+      const drive = (data || []).find((d) => d.path === '/media') || (data || []).sort((a, b) => b.totalSpace - a.totalSpace)[0]
+      if (drive) {
+        out.media = { path: drive.path, total: drive.totalSpace, free: drive.freeSpace, used: drive.totalSpace - drive.freeSpace }
+        break
+      }
+    } catch { /* try next source */ }
+  }
+
+  res.json({ success: true, data: out, timestamp: new Date().toISOString() })
+})
+
 // Notification system
 const NOTIFICATIONS_FILE = './db/notifications.json'
 

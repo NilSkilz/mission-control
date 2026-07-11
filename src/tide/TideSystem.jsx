@@ -1,8 +1,100 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Label, EmptyHint } from './widgets'
-import { getServices, getMediaSummary } from '../lib/data'
+import { getServices, getMediaSummary, getSystemOverview } from '../lib/data'
 import { useUser } from '../context/UserContext'
+
+// tidy a byte count to TB/GB with one decimal
+function fmtBytes(b) {
+  if (b == null) return '—'
+  const tb = b / 1e12
+  if (tb >= 1) return `${tb.toFixed(1)} TB`
+  return `${Math.round(b / 1e9)} GB`
+}
+
+// colour a 0-100 load: green normal, amber busy, coral hot
+function loadColour(pct) {
+  if (pct >= 90) return '#e06a6a'
+  if (pct >= 75) return 'var(--tide-accent-ink)'
+  return 'var(--p-logan)'
+}
+function tempColour(c) {
+  if (c >= 80) return '#e06a6a'
+  if (c >= 68) return 'var(--tide-accent-ink)'
+  return 'var(--p-logan)'
+}
+
+function Meter({ pct, colour }) {
+  const p = Math.max(0, Math.min(100, pct || 0))
+  return (
+    <div style={{ height: 7, borderRadius: 6, background: 'color-mix(in srgb, var(--tide-ink) 10%, transparent)', overflow: 'hidden', marginTop: 8 }}>
+      <div style={{ width: `${p}%`, height: '100%', borderRadius: 6, background: colour, transition: 'width .4s ease' }} />
+    </div>
+  )
+}
+
+function StatCard({ label, big, sub, pct, colour }) {
+  return (
+    <div className="tide-card" style={{ padding: 14 }}>
+      <div className="tide-sub" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em' }}>{label}</div>
+      <div style={{ fontWeight: 700, fontSize: 20, marginTop: 4, color: colour || 'var(--tide-ink)' }}>{big}</div>
+      {sub && <div className="tide-sub" style={{ fontSize: 12, marginTop: 2 }}>{sub}</div>}
+      {pct != null && <Meter pct={pct} colour={colour} />}
+    </div>
+  )
+}
+
+function SystemStats({ ov }) {
+  if (!ov) return null
+  const { host, media } = ov
+  const hostOk = host && !host.error
+
+  const usedPct = media && media.total ? (media.used / media.total) * 100 : null
+  const memPct = hostOk && host.mem?.total ? (host.mem.used / host.mem.total) * 100 : null
+
+  if (!media && !hostOk) return null
+
+  return (
+    <div style={{ marginTop: 20 }}>
+      <Label>at home right now</Label>
+      <div className="tide-stat-grid" style={{ marginTop: 8 }}>
+        {media && (
+          <StatCard
+            label="media drive"
+            big={`${fmtBytes(media.free)} free`}
+            sub={`${fmtBytes(media.used)} of ${fmtBytes(media.total)} used`}
+            pct={usedPct}
+            colour={loadColour(usedPct)}
+          />
+        )}
+        {hostOk && (
+          <>
+            <StatCard
+              label="cpu"
+              big={`${host.cpu_pct}%`}
+              sub={`load ${host.load?.[0]} · ${host.cores} cores`}
+              pct={host.cpu_pct}
+              colour={loadColour(host.cpu_pct)}
+            />
+            <StatCard
+              label="memory"
+              big={`${Math.round(memPct)}%`}
+              sub={`${fmtBytes(host.mem.used)} of ${fmtBytes(host.mem.total)}`}
+              pct={memPct}
+              colour={loadColour(memPct)}
+            />
+            <StatCard
+              label="cpu temp"
+              big={`${host.temp_c}°C`}
+              sub={host.temp_max_c && host.temp_max_c !== host.temp_c ? `${host.temp_max_c}°C peak core` : 'server'}
+              colour={tempColour(host.temp_c)}
+            />
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
 
 // small live stat per media service, pulled from /api/media/summary
 function mediaStat(key, sum) {
@@ -42,6 +134,7 @@ export default function TideSystem() {
   const isParent = user?.role === 'parent'
   const [services, setServices] = useState([])
   const [sum, setSum] = useState(null)
+  const [ov, setOv] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -50,6 +143,8 @@ export default function TideSystem() {
       if (!alive) return
       setServices(svc.services || []); setSum(s); setLoading(false)
     })
+    // host/media stats load independently (slower: SSH + arr API) so they never hold up the links
+    getSystemOverview().then((o) => { if (alive) setOv(o) })
     return () => { alive = false }
   }, [])
 
@@ -63,6 +158,8 @@ export default function TideSystem() {
         {isParent && <Link to="/system/dashboard" className="tide-pill" style={{ marginLeft: 'auto' }}>▦ dashboard</Link>}
       </div>
       <p className="tide-sub" style={{ marginTop: 6 }}>quick links to everything running at home</p>
+
+      <SystemStats ov={ov} />
 
       {loading ? (
         <p className="tide-sub" style={{ marginTop: 18 }}>checking services…</p>

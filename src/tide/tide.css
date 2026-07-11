@@ -535,6 +535,13 @@
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 12px;
 }
+/* system-tab at-a-glance stat cards */
+.tide-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
 .tide-service { transition: transform 120ms ease, border-color 200ms ease; }
 .tide-service:hover { transform: translateY(-2px); border-color: var(--tide-accent-ink); }
 
