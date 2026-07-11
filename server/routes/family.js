@@ -260,6 +260,18 @@ router.post('/users/:id/payout', (req, res) => {
   res.json({ paid });
 });
 
+// Reset a user's wallet to £0 once the cash has actually been handed over.
+// Marks paid-out completions as settled (cashed out) rather than deleting them,
+// so streaks and week-earned history stay intact.
+router.post('/users/:id/settle', (req, res) => {
+  const now = new Date().toISOString();
+  const settled = db.prepare(`
+    UPDATE choreCompletions SET settled = 1, settledAt = ?, updatedAt = ?
+    WHERE userId = ? AND paidOut = 1 AND settled = 0
+  `).run(now, now, req.params.id).changes;
+  res.json({ settled });
+});
+
 // ---- Meals (upsert keyed on date + mealType; empty meal deletes the slot) ----
 
 router.get('/meals', (req, res) => res.json(list('meals')));
@@ -400,7 +412,7 @@ async function buildContext(user) {
   const completions = list('choreCompletions');
   if (isKid) {
     const mine = completions.filter((c) => c.userId === user.id);
-    const balance = mine.filter((c) => c.paidOut).reduce((s, c) => s + (c.amount || 0), 0);
+    const balance = mine.filter((c) => c.paidOut && !c.settled).reduce((s, c) => s + (c.amount || 0), 0);
     const pending = mine.filter((c) => c.approved && !c.paidOut).reduce((s, c) => s + (c.amount || 0), 0);
     const doneToday = new Set(mine.filter((c) => c.completedAt?.slice(0, 10) === todayStr()).map((c) => c.choreId));
     const left = list('chores').filter((c) => c.assignedTo === user.id && !doneToday.has(c.id)).map((c) => c.title);
@@ -473,7 +485,7 @@ async function groundedReply(user, text) {
   // chores / wallet
   if (ask(/chore|job|task|wallet|money|pocket|earn/)) {
     const completions = list('choreCompletions').filter((c) => c.userId === user.id);
-    const balance = completions.filter((c) => c.paidOut).reduce((s, c) => s + (c.amount || 0), 0);
+    const balance = completions.filter((c) => c.paidOut && !c.settled).reduce((s, c) => s + (c.amount || 0), 0);
     const pending = completions.filter((c) => c.approved && !c.paidOut).reduce((s, c) => s + (c.amount || 0), 0);
     if (ask(/wallet|money|pocket|earn/)) {
       return { reply: `Your wallet is **£${balance.toFixed(2)}**${pending > 0 ? `, with £${pending.toFixed(2)} approved and waiting for Sunday's payout.` : '.'}` };

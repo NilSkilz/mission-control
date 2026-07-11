@@ -4,7 +4,7 @@ import { firstName } from '../tide/people'
 import { Label, Ring, Avatar, Pip, EmptyHint, formatGBP } from '../tide/widgets'
 import {
   getUsers, getChores, getChoreCompletions,
-  addChore, deleteChore, markChoreDone, approveCompletion, deleteCompletion, payOutChores,
+  addChore, deleteChore, markChoreDone, approveCompletion, deleteCompletion, payOutChores, resetWallet,
   getToday, getTodayCompletion, getWeekStart,
 } from '../lib/data'
 
@@ -22,7 +22,7 @@ function streakFor(completions) {
 // Aggregate a child's money + progress from their completions.
 function walletFor(userId, completions) {
   const mine = completions.filter((c) => c.userId === userId)
-  const balance = mine.filter((c) => c.paidOut).reduce((s, c) => s + (c.amount || 0), 0)
+  const balance = mine.filter((c) => c.paidOut && !c.settled).reduce((s, c) => s + (c.amount || 0), 0)
   const pending = mine.filter((c) => c.approved && !c.paidOut).reduce((s, c) => s + (c.amount || 0), 0)
   const weekStart = getWeekStart()
   const weekEarned = mine
@@ -139,6 +139,10 @@ function ParentChores({ users, chores, completions, reload }) {
   const approve = async (id) => { await approveCompletion(id); reload() }
   const payout = async (uid) => { await payOutChores(uid); reload() }
   const removeChore = async (id) => { await deleteChore(id); reload() }
+  const reset = async (kid, amount) => {
+    if (!window.confirm(`Reset ${firstName(kid).toLowerCase()}'s wallet to £0? Do this once you've handed over the ${formatGBP(amount)}.`)) return
+    await resetWallet(kid.id); reload()
+  }
 
   const submit = async (e) => {
     e.preventDefault()
@@ -182,11 +186,18 @@ function ParentChores({ users, chores, completions, reload }) {
                   <div style={{ fontWeight: 700 }}>{firstName(kid).toLowerCase()}</div>
                   <div className="tide-sub" style={{ fontSize: 12 }}>wallet {formatGBP(w.balance)} · {formatGBP(w.pending)} to pay</div>
                 </div>
-                {w.pending > 0 && (
-                  <button className="tide-btn tide-btn-primary" style={{ marginLeft: 'auto', padding: '6px 12px', fontSize: 13 }} onClick={() => payout(kid.id)}>
-                    pay {formatGBP(w.pending)}
-                  </button>
-                )}
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flex: 'none' }}>
+                  {w.pending > 0 && (
+                    <button className="tide-btn tide-btn-primary" style={{ padding: '6px 12px', fontSize: 13 }} onClick={() => payout(kid.id)}>
+                      pay {formatGBP(w.pending)}
+                    </button>
+                  )}
+                  {w.balance > 0 && (
+                    <button className="tide-btn" style={{ padding: '6px 12px', fontSize: 13 }} onClick={() => reset(kid, w.balance)} title="mark as paid and reset the wallet to £0">
+                      reset £0
+                    </button>
+                  )}
+                </div>
               </div>
 
               {waiting.length > 0 && (

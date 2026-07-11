@@ -64,6 +64,8 @@ db.exec(`
     approvedAt TEXT,
     paidOut INTEGER NOT NULL DEFAULT 0,
     paidAt TEXT,
+    settled INTEGER NOT NULL DEFAULT 0,
+    settledAt TEXT,
     createdAt TEXT NOT NULL,
     updatedAt TEXT NOT NULL
   );
@@ -190,6 +192,14 @@ for (const [col, def] of [['targetUserId', 'TEXT'], ['pinned', 'INTEGER NOT NULL
   if (!has) db.exec(`ALTER TABLE notes ADD COLUMN ${col} ${def}`);
 }
 
+// A wallet can now be reset to £0 once the cash is physically handed over.
+// "settled" marks paid-out completions as cashed out so they drop off the
+// balance without deleting the record (keeps streaks + week-earned history).
+for (const [col, def] of [['settled', 'INTEGER NOT NULL DEFAULT 0'], ['settledAt', 'TEXT']]) {
+  const has = db.prepare('PRAGMA table_info(choreCompletions)').all().some((c) => c.name === col);
+  if (!has) db.exec(`ALTER TABLE choreCompletions ADD COLUMN ${col} ${def}`);
+}
+
 // Make chores.assignedTo nullable ("anyone can do it") on DBs where it was
 // created NOT NULL. SQLite can't drop a NOT NULL in place, so rebuild the table.
 const assignedCol = db.prepare('PRAGMA table_info(chores)').all().find((c) => c.name === 'assignedTo');
@@ -284,7 +294,7 @@ for (const u of db.prepare('SELECT id, username, passwordHash FROM users').all()
 const BOOL_COLUMNS = {
   choreTemplates: ['paid'],
   chores: ['paid'],
-  choreCompletions: ['approved', 'paidOut'],
+  choreCompletions: ['approved', 'paidOut', 'settled'],
   mealRecipes: ['isCustom'],
   shoppingItems: ['checked'],
   notes: ['pinned'],

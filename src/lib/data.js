@@ -252,6 +252,13 @@ export async function payOutChores(userId) {
   return result.paid
 }
 
+// Reset a user's wallet to £0 once the cash has been handed over. Marks
+// paid-out completions as settled (non-destructive; keeps streak history).
+export async function resetWallet(userId) {
+  const result = await request(`/users/${userId}/settle`, { method: 'POST', body: {} })
+  return result.settled
+}
+
 // ==================== MEALS ====================
 
 export async function getMeals() {
