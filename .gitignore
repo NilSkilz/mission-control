@@ -33,3 +33,6 @@ amplify_outputs.json
 # Local family data store
 db/family.sqlite*
 db/.vapid.json
+
+# runtime host-stats SSH key (deployed out-of-band on CT 112)
+.ssh/
