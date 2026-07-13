@@ -21,6 +21,7 @@ const SERVICES = [
   { key: 'sab', name: 'SABnzbd', emoji: '⬇️', desc: 'Usenet downloader', url: 'https://nzb.cracky.co.uk', host: '192.168.1.7', port: 7777 },
   { key: 'plausible', name: 'Plausible', emoji: '📈', desc: 'Site analytics', url: 'https://plausible.cracky.co.uk', host: '192.168.1.15', port: 8000 },
   // LAN-only (no public subdomain) — links go to the LAN address
+  { key: 'crafterp', name: 'Craft ERP', emoji: '🧵', desc: 'Craft business stock & sales', url: 'http://192.168.1.10:7273', host: '192.168.1.10', port: 7273, lan: true },
   { key: 'proxmox', name: 'Proxmox', emoji: '🧰', desc: 'Hypervisor / all the VMs', url: 'https://192.168.1.2:8006', host: '192.168.1.2', port: 8006, lan: true },
   { key: 'npm', name: 'Nginx Proxy Manager', emoji: '🔀', desc: 'Reverse proxy admin', url: 'http://192.168.1.14:81', host: '192.168.1.14', port: 81, lan: true },
   { key: 'tdarr', name: 'Tdarr', emoji: '🗜️', desc: 'Transcoding', url: 'http://192.168.1.13:8265', host: '192.168.1.13', port: 8265, lan: true },
