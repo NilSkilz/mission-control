@@ -191,8 +191,24 @@ async function cached(key, ttlMs, fn) {
   return val
 }
 
+// Current date in Europe/London (site timezone), shifted by offsetDays, as YYYY-MM-DD.
+// We anchor to London ourselves rather than trusting Plausible's relative periods:
+// on this instance `period=7d` lags ~2 days and returns all-zeros, hiding recent hits.
+function londonDate(offsetDays = 0) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date())
+  const y = +parts.find((p) => p.type === 'year').value
+  const m = +parts.find((p) => p.type === 'month').value
+  const d = +parts.find((p) => p.type === 'day').value
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  dt.setUTCDate(dt.getUTCDate() + offsetDays)
+  return dt.toISOString().slice(0, 10)
+}
+
 // GET /api/system/analytics - Plausible weekly usage for the Tethered app.
-// Returns { days: [{date, visitors}], total } — daily unique visitors over 7 days.
+// Returns { days: [{date, visitors}], total, last24h } — daily unique visitors over the
+// last 7 days (including today) plus unique visitors across the last ~24h.
 // Config: PLAUSIBLE_URL, PLAUSIBLE_SITE_ID, PLAUSIBLE_API_KEY.
 router.get('/analytics', async (req, res) => {
   const base = process.env.PLAUSIBLE_URL || 'http://192.168.1.15:8000'
@@ -202,13 +218,24 @@ router.get('/analytics', async (req, res) => {
   try {
     const data = await cached('plausible:7d', 5 * 60 * 1000, async () => {
       const headers = { Authorization: `Bearer ${token}` }
+      const end = londonDate(0)
+      const start = londonDate(-6)
       const { data: ts } = await axios.get(`${base}/api/v1/stats/timeseries`, {
         timeout: 8000, headers,
-        params: { site_id: site, period: '7d', metrics: 'visitors' },
+        params: { site_id: site, period: 'custom', date: `${start},${end}`, metrics: 'visitors' },
       })
       const days = (ts.results || []).map((r) => ({ date: r.date, visitors: r.visitors || 0 }))
       const total = days.reduce((n, d) => n + d.visitors, 0)
-      return { site, days, total }
+      // Rolling last-24h unique visitors (yesterday + today, deduplicated by Plausible).
+      let last24h = null
+      try {
+        const { data: agg } = await axios.get(`${base}/api/v1/stats/aggregate`, {
+          timeout: 8000, headers,
+          params: { site_id: site, period: 'custom', date: `${londonDate(-1)},${end}`, metrics: 'visitors' },
+        })
+        last24h = agg?.results?.visitors?.value ?? null
+      } catch { /* leave last24h null on failure */ }
+      return { site, days, total, last24h }
     })
     res.json({ success: true, data })
   } catch (error) {

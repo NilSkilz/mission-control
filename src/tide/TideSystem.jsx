@@ -109,8 +109,19 @@ function UsageWeek({ data }) {
   return (
     <div className="tide-card" style={{ padding: 16, flex: '2 1 260px', minWidth: 240 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-        <div className="tide-sub" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em' }}>Tethered · people this week</div>
-        <div style={{ fontWeight: 700, fontSize: 20 }}>{data.total}</div>
+        <div className="tide-sub" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em' }}>Tethered · usage</div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
+          {data.last24h != null && (
+            <div style={{ fontWeight: 700, fontSize: 20 }}>
+              {data.last24h}
+              <span className="tide-sub" style={{ fontSize: 11, fontWeight: 400, marginLeft: 5 }}>24h</span>
+            </div>
+          )}
+          <div style={{ fontWeight: 700, fontSize: 20 }}>
+            {data.total}
+            <span className="tide-sub" style={{ fontSize: 11, fontWeight: 400, marginLeft: 5 }}>7d</span>
+          </div>
+        </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 72, marginTop: 12 }}>
         {data.days.map((d) => {
