@@ -20,6 +20,7 @@ const SERVICES = [
   { key: 'prowlarr', name: 'Prowlarr', emoji: '🔎', desc: 'Indexer manager', url: 'https://prowlarr.cracky.co.uk', host: '192.168.1.5', port: 9696 },
   { key: 'sab', name: 'SABnzbd', emoji: '⬇️', desc: 'Usenet downloader', url: 'https://nzb.cracky.co.uk', host: '192.168.1.7', port: 7777 },
   { key: 'plausible', name: 'Plausible', emoji: '📈', desc: 'Site analytics', url: 'https://plausible.cracky.co.uk', host: '192.168.1.15', port: 8000 },
+  { key: 'glitchtip', name: 'GlitchTip', emoji: '🐛', desc: 'App error tracking (Sentry-compatible)', url: 'https://glitchtip.cracky.co.uk', host: '192.168.1.62', port: 8000 },
   { key: 'crafterp', name: 'Craft ERP', emoji: '🧵', desc: 'Craft business stock & sales', url: 'https://erp.cracky.co.uk', host: '192.168.1.10', port: 7273 },
   // LAN-only (no public subdomain) — links go to the LAN address
   { key: 'proxmox', name: 'Proxmox', emoji: '🧰', desc: 'Hypervisor / all the VMs', url: 'https://192.168.1.2:8006', host: '192.168.1.2', port: 8006, lan: true },
@@ -27,6 +28,7 @@ const SERVICES = [
   { key: 'tdarr', name: 'Tdarr', emoji: '🗜️', desc: 'Transcoding', url: 'http://192.168.1.13:8265', host: '192.168.1.13', port: 8265, lan: true },
   { key: 'unifi', name: 'UniFi (router)', emoji: '📡', desc: 'Network / Dream Machine', url: 'https://192.168.1.1', host: '192.168.1.1', port: 443, lan: true },
   { key: 'uptimekuma', name: 'Uptime Kuma', emoji: '📟', desc: 'Service uptime monitor', url: 'http://192.168.1.19:3001', host: '192.168.1.19', port: 3001, lan: true },
+  { key: 'e2e', name: 'Cypress Tests', emoji: '🧪', desc: 'Tethered E2E run dashboard', url: 'http://192.168.1.94:4747', host: '192.168.1.94', port: 4747, lan: true },
 ]
 
 function tcpCheck(host, port, timeout = 2500) {
