@@ -23,6 +23,23 @@ export const HOUSE_TEMP_SENSOR = null
 // Deep link out to the full Home Assistant for everything not wrapped here.
 export const HA_LINK = 'https://ha.cracky.co.uk'
 
+// Alexa devices for the announce widget. These are the Echo/Dot media_players
+// in HA; "everywhere" is Alexa's built-in group that speaks on all of them at
+// once. TTS is sent via media_player.play_media with content type "announce"
+// (the ding-dong chime then the message), so anyone can broadcast "tea time".
+export const ALEXA_DEVICES = [
+  { entity_id: 'media_player.everywhere', label: 'everywhere', icon: '📢', all: true },
+  { entity_id: 'media_player.kitchen_dot', label: 'kitchen', icon: '🍳' },
+  { entity_id: 'media_player.living_room_echo', label: 'living room', icon: '🛋️' },
+  { entity_id: 'media_player.bedroom_dot', label: 'bedroom', icon: '🛏️' },
+  { entity_id: 'media_player.bedroom_clock', label: 'bedroom clock', icon: '⏰' },
+  { entity_id: 'media_player.dexter_s_dot', label: "dexter's room", icon: '🎧' },
+  { entity_id: 'media_player.logan_s_dot', label: "logan's room", icon: '🎮' },
+]
+
+// One-tap message presets for the announce widget.
+export const ANNOUNCE_PRESETS = ['Tea time!', "Dinner's ready", 'Come downstairs', 'Time to leave', 'Bedtime']
+
 export function controlsFor(user) {
   if (!user) return []
   return HOUSE_CONTROLS.filter((c) => {

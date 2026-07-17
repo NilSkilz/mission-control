@@ -4,6 +4,7 @@ import { useUser } from '../context/UserContext'
 import { useTideTheme } from './TideThemeProvider'
 import { firstName, personColor } from './people'
 import { Label, Ring, EmptyHint, Pip, formatGBP } from './widgets'
+import TideAnnounce from './TideAnnounce'
 import {
   getUsers, getChores, getChoreCompletions, getNotes, getMeals,
   getCalendarEvents, getToday, getTodayCompletion,
@@ -218,6 +219,9 @@ export default function TideHome() {
           </div>
         </div>
       </div>
+
+      {/* broadcast a TTS message to the Echoes (parents only) */}
+      {isParent && <TideAnnounce />}
     </div>
   )
 }
