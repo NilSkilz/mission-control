@@ -447,6 +447,24 @@ export async function haStates(entityIds = []) {
   } catch { return [] }
 }
 
+// Living-room thermostat for the house dial: { available, current, target, mode, ... } or null.
+export async function haClimate() {
+  try {
+    const res = await fetch(`${HA_BASE}/climate`, { headers: authHeaders() })
+    if (!res.ok) return null
+    return (await res.json()).data || null
+  } catch { return null }
+}
+
+// 7-day grid usage vs solar-export energy: { days:[{date,usage,production}], totals, unit, live } or null.
+export async function haEnergyWeek() {
+  try {
+    const res = await fetch(`${HA_BASE}/energy-week`, { headers: authHeaders() })
+    if (!res.ok) return null
+    return (await res.json()).data || null
+  } catch { return null }
+}
+
 export async function haCall(domain, service, entity_id, data = {}) {
   const res = await fetch(`${HA_BASE}/service`, {
     method: 'POST',

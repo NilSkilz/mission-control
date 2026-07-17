@@ -3,6 +3,8 @@ import { useUser } from '../context/UserContext'
 import { Label, EmptyHint } from './widgets'
 import { haStates, haCall } from '../lib/data'
 import { controlsFor, HOUSE_TEMP_SENSOR, HA_LINK } from './houseConfig'
+import TideThermostat from './TideThermostat'
+import TideEnergy from './TideEnergy'
 
 const ON_STATES = new Set(['on', 'open', 'home', 'playing', 'heat', 'cool'])
 
@@ -77,6 +79,10 @@ export default function TideHouse() {
         <a href={HA_LINK} target="_blank" rel="noreferrer" className="tide-pill" style={{ marginLeft: 'auto', textDecoration: 'none' }}>open home assistant ↗</a>
       </div>
       <p className="tide-sub" style={{ marginTop: 6 }}>your corner of the house · everything else lives in HA</p>
+
+      <TideThermostat />
+
+      <TideEnergy />
 
       {temp && (
         <div className="tide-card" style={{ padding: 16, marginTop: 16, maxWidth: 240 }}>

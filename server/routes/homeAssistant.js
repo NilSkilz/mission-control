@@ -710,6 +710,138 @@ router.get('/current-energy', async (req, res) => {
   }
 })
 
+// ---- small numeric helpers for the house widgets ----
+const num = (v) => {
+  if (v === null || v === undefined || v === '' || v === 'unknown' || v === 'unavailable') return null
+  const n = parseFloat(v)
+  return isNaN(n) ? null : n
+}
+const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100
+
+// GET /api/ha/climate - living-room thermostat, shaped for the Nest-style dial
+router.get('/climate', async (req, res) => {
+  try {
+    const entityId = process.env.HA_CLIMATE_ENTITY || 'climate.living_room_living_room'
+    const s = await ha.getState(entityId)
+    if (!s) return res.json({ success: true, data: { available: false } })
+    const a = s.attributes || {}
+    res.json({
+      success: true,
+      data: {
+        available: true,
+        entity_id: entityId,
+        mode: s.state,                              // 'heat' | 'off' | ...
+        action: a.hvac_action || null,             // 'heating' | 'idle' | 'off'
+        current: num(a.current_temperature),
+        target: num(a.temperature),
+        humidity: num(a.current_humidity),
+        min: num(a.min_temp) ?? 7,
+        max: num(a.max_temp) ?? 35,
+        step: num(a.target_temp_step) || 0.5,
+        unit: a.unit_of_measurement || '°C',
+        modes: a.hvac_modes || ['heat', 'off'],
+        presets: a.preset_modes || null,
+        preset: a.preset_mode || null,
+        name: a.friendly_name || 'Thermostat',
+      },
+      timestamp: new Date().toISOString(),
+    })
+  } catch (error) {
+    res.json({ success: true, data: { available: false, error: error.message } })
+  }
+})
+
+// GET /api/ha/energy-week - 7 days of grid usage vs solar export, HA-energy-page style.
+// We only have a single net-metering clamp (Shelly EM ch1), so "production" here is
+// the solar surplus actually returned to the grid (energy_returned), and "usage" is
+// energy imported from the grid. Daily figures are per-local-day deltas of the
+// cumulative kWh counters.
+router.get('/energy-week', async (req, res) => {
+  try {
+    const importSensor = process.env.HA_GRID_IMPORT_SENSOR || 'sensor.shellyem_34945470ed50_channel_1_energy'
+    const exportSensor = process.env.HA_GRID_EXPORT_SENSOR || 'sensor.shellyem_34945470ed50_channel_1_energy_returned'
+    const powerSensor = process.env.HA_GRID_POWER_SENSOR || 'sensor.shellyem_34945470ed50_channel_1_power'
+    const days = 7
+
+    const now = new Date()
+    const start = new Date(now)
+    start.setDate(now.getDate() - days)
+    start.setHours(0, 0, 0, 0)
+
+    const fetchHist = async (id) => {
+      try {
+        const r = await ha.client.get(`/history/period/${start.toISOString()}`, {
+          params: { filter_entity_id: id, end_time: now.toISOString(), minimal_response: true },
+        })
+        return (r.data && r.data[0]) ? r.data[0] : []
+      } catch { return [] }
+    }
+
+    const [imp, exp] = await Promise.all([fetchHist(importSensor), fetchHist(exportSensor)])
+
+    const dayKey = (ts) => {
+      const d = new Date(ts)
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    }
+    // Cumulative counter -> per-day delta (max-min; guard against counter resets).
+    const bucket = (points) => {
+      const m = {}
+      for (const p of points) {
+        const v = num(p.state)
+        if (v === null) continue
+        const k = dayKey(p.last_changed || p.last_updated)
+        const b = m[k] || (m[k] = { min: v, max: v })
+        if (v < b.min) b.min = v
+        if (v > b.max) b.max = v
+      }
+      const out = {}
+      for (const k of Object.keys(m)) {
+        const d = m[k].max - m[k].min
+        out[k] = d > 0 ? d : 0
+      }
+      return out
+    }
+
+    const impDay = bucket(imp)
+    const expDay = bucket(exp)
+
+    const list = []
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now)
+      d.setDate(now.getDate() - i)
+      const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      list.push({ date: k, usage: round2(impDay[k] || 0), production: round2(expDay[k] || 0) })
+    }
+
+    // Live grid power right now: +ve = importing, -ve = exporting (solar surplus).
+    let live = null
+    try {
+      const ps = await ha.getState(powerSensor)
+      const w = ps ? num(ps.state) : null
+      if (w !== null) live = { watts: Math.round(w), flow: w >= 0 ? 'import' : 'export' }
+    } catch { /* no live reading */ }
+
+    const totals = list.reduce(
+      (t, d) => ({ usage: t.usage + d.usage, production: t.production + d.production }),
+      { usage: 0, production: 0 },
+    )
+
+    res.json({
+      success: true,
+      data: {
+        days: list,
+        totals: { usage: round2(totals.usage), production: round2(totals.production) },
+        unit: 'kWh',
+        live,
+      },
+      timestamp: new Date().toISOString(),
+    })
+  } catch (error) {
+    console.error('Energy Week API Error:', error)
+    res.json({ success: true, data: null, error: error.message })
+  }
+})
+
 // POST /api/ha/service - Call a Home Assistant service
 router.post('/service', async (req, res) => {
   try {
