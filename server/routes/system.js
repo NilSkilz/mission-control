@@ -180,6 +180,68 @@ router.get('/overview', async (req, res) => {
   res.json({ success: true, data: out, timestamp: new Date().toISOString() })
 })
 
+// ---- tiny in-memory cache so we don't hammer Plausible/GlitchTip on every tab open ----
+const _cache = new Map()
+async function cached(key, ttlMs, fn) {
+  const hit = _cache.get(key)
+  const now = Date.now()
+  if (hit && now - hit.at < ttlMs) return hit.val
+  const val = await fn()
+  _cache.set(key, { at: now, val })
+  return val
+}
+
+// GET /api/system/analytics - Plausible weekly usage for the Tethered app.
+// Returns { days: [{date, visitors}], total } — daily unique visitors over 7 days.
+// Config: PLAUSIBLE_URL, PLAUSIBLE_SITE_ID, PLAUSIBLE_API_KEY.
+router.get('/analytics', async (req, res) => {
+  const base = process.env.PLAUSIBLE_URL || 'http://192.168.1.15:8000'
+  const site = process.env.PLAUSIBLE_SITE_ID || 'tethered.me.uk'
+  const token = process.env.PLAUSIBLE_API_KEY
+  if (!token) return res.json({ success: false, error: 'not configured', data: null })
+  try {
+    const data = await cached('plausible:7d', 5 * 60 * 1000, async () => {
+      const headers = { Authorization: `Bearer ${token}` }
+      const { data: ts } = await axios.get(`${base}/api/v1/stats/timeseries`, {
+        timeout: 8000, headers,
+        params: { site_id: site, period: '7d', metrics: 'visitors' },
+      })
+      const days = (ts.results || []).map((r) => ({ date: r.date, visitors: r.visitors || 0 }))
+      const total = days.reduce((n, d) => n + d.visitors, 0)
+      return { site, days, total }
+    })
+    res.json({ success: true, data })
+  } catch (error) {
+    res.json({ success: false, error: error.message, data: null })
+  }
+})
+
+// GET /api/system/errors - GlitchTip open-error summary for the Tethered app.
+// Returns { openIssues, events, lastSeen } from the Sentry-compatible API.
+// Config: GLITCHTIP_URL, GLITCHTIP_ORG, GLITCHTIP_TOKEN.
+router.get('/errors', async (req, res) => {
+  const base = process.env.GLITCHTIP_URL || 'http://192.168.1.62:8000'
+  const org = process.env.GLITCHTIP_ORG || 'tethered'
+  const token = process.env.GLITCHTIP_TOKEN
+  if (!token) return res.json({ success: false, error: 'not configured', data: null })
+  try {
+    const data = await cached('glitchtip:issues', 5 * 60 * 1000, async () => {
+      const { data: issues } = await axios.get(`${base}/api/0/organizations/${org}/issues/`, {
+        timeout: 8000,
+        headers: { Authorization: `Bearer ${token}` },
+        params: { query: 'is:unresolved', limit: 100 },
+      })
+      const list = Array.isArray(issues) ? issues : []
+      const events = list.reduce((n, i) => n + (parseInt(i.count, 10) || 0), 0)
+      const lastSeen = list.map((i) => i.lastSeen).filter(Boolean).sort().pop() || null
+      return { openIssues: list.length, events, lastSeen }
+    })
+    res.json({ success: true, data })
+  } catch (error) {
+    res.json({ success: false, error: error.message, data: null })
+  }
+})
+
 // Notification system
 const NOTIFICATIONS_FILE = './db/notifications.json'
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Label, EmptyHint } from './widgets'
-import { getServices, getMediaSummary, getSystemOverview } from '../lib/data'
+import { getServices, getMediaSummary, getSystemOverview, getAnalytics, getErrors } from '../lib/data'
 import { useUser } from '../context/UserContext'
 
 // tidy a byte count to TB/GB with one decimal
@@ -96,6 +96,78 @@ function SystemStats({ ov }) {
   )
 }
 
+// one-letter weekday for a YYYY-MM-DD date, e.g. "M"
+function dayInitial(iso) {
+  const d = new Date(`${iso}T00:00:00`)
+  return ['S', 'M', 'T', 'W', 'T', 'F', 'S'][d.getDay()] || ''
+}
+
+// Plausible weekly visitors, drawn as a small gradient bar chart.
+function UsageWeek({ data }) {
+  if (!data || !data.days?.length) return null
+  const max = Math.max(1, ...data.days.map((d) => d.visitors))
+  return (
+    <div className="tide-card" style={{ padding: 16, flex: '2 1 260px', minWidth: 240 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+        <div className="tide-sub" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em' }}>Tethered · people this week</div>
+        <div style={{ fontWeight: 700, fontSize: 20 }}>{data.total}</div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 72, marginTop: 12 }}>
+        {data.days.map((d) => {
+          const h = Math.round((d.visitors / max) * 100)
+          return (
+            <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <div style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'flex-end' }}>
+                <div
+                  title={`${d.date}: ${d.visitors}`}
+                  style={{
+                    width: '100%', height: `${Math.max(d.visitors ? 8 : 2, h)}%`, borderRadius: 5,
+                    background: d.visitors ? 'linear-gradient(180deg,#f08c5a,#d96d8f)' : 'color-mix(in srgb, var(--tide-ink) 10%, transparent)',
+                    transition: 'height .4s ease',
+                  }}
+                />
+              </div>
+              <span className="tide-sub" style={{ fontSize: 10 }}>{dayInitial(d.date)}</span>
+            </div>
+          )
+        })}
+      </div>
+      <div className="tide-sub" style={{ fontSize: 11, marginTop: 8 }}>unique visitors per day · last 7 days</div>
+    </div>
+  )
+}
+
+// GlitchTip open-error count, styled like the other stat cards.
+function ErrorsCard({ data }) {
+  if (!data) return null
+  const n = data.openIssues || 0
+  const colour = n === 0 ? 'var(--p-logan)' : n >= 5 ? '#e06a6a' : 'var(--tide-accent-ink)'
+  const seen = data.lastSeen ? new Date(data.lastSeen).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : null
+  return (
+    <a href="https://glitchtip.cracky.co.uk" target="_blank" rel="noreferrer" className="tide-card" style={{ padding: 16, flex: '1 1 160px', minWidth: 150, textDecoration: 'none', color: 'var(--tide-ink)', display: 'block' }}>
+      <div className="tide-sub" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em' }}>open errors</div>
+      <div style={{ fontWeight: 700, fontSize: 28, marginTop: 4, color: colour }}>{n}</div>
+      <div className="tide-sub" style={{ fontSize: 12, marginTop: 2 }}>
+        {n === 0 ? 'all clear' : `${data.events} event${data.events === 1 ? '' : 's'}${seen ? ` · last ${seen}` : ''}`}
+      </div>
+      <div className="tide-sub" style={{ fontSize: 11, marginTop: 8, color: 'var(--tide-accent-ink)' }}>GlitchTip ↗</div>
+    </a>
+  )
+}
+
+function AppHealth({ analytics, errors }) {
+  if (!analytics && !errors) return null
+  return (
+    <div style={{ marginTop: 24 }}>
+      <Label>app usage &amp; health</Label>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
+        <UsageWeek data={analytics} />
+        <ErrorsCard data={errors} />
+      </div>
+    </div>
+  )
+}
+
 // small live stat per media service, pulled from /api/media/summary
 function mediaStat(key, sum) {
   if (!sum) return null
@@ -135,6 +207,8 @@ export default function TideSystem() {
   const [services, setServices] = useState([])
   const [sum, setSum] = useState(null)
   const [ov, setOv] = useState(null)
+  const [analytics, setAnalytics] = useState(null)
+  const [errors, setErrors] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -145,8 +219,13 @@ export default function TideSystem() {
     })
     // host/media stats load independently (slower: SSH + arr API) so they never hold up the links
     getSystemOverview().then((o) => { if (alive) setOv(o) })
+    // app usage + errors: parents only, and each loads on its own (external APIs)
+    if (isParent) {
+      getAnalytics().then((a) => { if (alive) setAnalytics(a) })
+      getErrors().then((e) => { if (alive) setErrors(e) })
+    }
     return () => { alive = false }
-  }, [])
+  }, [isParent])
 
   const hosted = services.filter((s) => !s.lan)
   const network = services.filter((s) => s.lan)
@@ -160,6 +239,8 @@ export default function TideSystem() {
       <p className="tide-sub" style={{ marginTop: 6 }}>quick links to everything running at home</p>
 
       <SystemStats ov={ov} />
+
+      {isParent && <AppHealth analytics={analytics} errors={errors} />}
 
       {loading ? (
         <p className="tide-sub" style={{ marginTop: 18 }}>checking services…</p>

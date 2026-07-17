@@ -408,6 +408,24 @@ export async function getSystemOverview() {
   } catch { return null }
 }
 
+// Plausible weekly usage for Tethered: { days:[{date,visitors}], total } or null.
+export async function getAnalytics() {
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/system/analytics`, { headers: authHeaders() })
+    if (!res.ok) return null
+    return (await res.json()).data || null
+  } catch { return null }
+}
+
+// GlitchTip open-error summary: { openIssues, events, lastSeen } or null.
+export async function getErrors() {
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/system/errors`, { headers: authHeaders() })
+    if (!res.ok) return null
+    return (await res.json()).data || null
+  } catch { return null }
+}
+
 // ==================== JARVIS CHAT ====================
 
 export async function askJarvis(userId, message) {
