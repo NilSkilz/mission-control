@@ -228,14 +228,21 @@ export default function TideSystem() {
       if (!alive) return
       setServices(svc.services || []); setSum(s); setLoading(false)
     })
-    // host/media stats load independently (slower: SSH + arr API) so they never hold up the links
-    getSystemOverview().then((o) => { if (alive) setOv(o) })
-    // app usage + errors: parents only, and each loads on its own (external APIs)
-    if (isParent) {
-      getAnalytics().then((a) => { if (alive) setAnalytics(a) })
-      getErrors().then((e) => { if (alive) setErrors(e) })
+    // Host/media stats + (parent-only) app usage & errors come from slow external
+    // APIs (SSH, Plausible, GlitchTip), so they load on their own AND refresh on a
+    // timer. A transient upstream blip then self-heals instead of leaving a card
+    // blank until a full page reload, and a failed poll keeps the last good value
+    // rather than blanking a working card.
+    const refresh = () => {
+      getSystemOverview().then((o) => { if (alive && o) setOv(o) })
+      if (isParent) {
+        getAnalytics().then((a) => { if (alive && a) setAnalytics(a) })
+        getErrors().then((e) => { if (alive && e) setErrors(e) })
+      }
     }
-    return () => { alive = false }
+    refresh()
+    const t = setInterval(refresh, 60000)
+    return () => { alive = false; clearInterval(t) }
   }, [isParent])
 
   const hosted = services.filter((s) => !s.lan)
