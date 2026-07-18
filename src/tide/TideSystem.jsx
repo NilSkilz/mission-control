@@ -127,7 +127,7 @@ function UsageWeek({ data }) {
         {data.days.map((d) => {
           const h = Math.round((d.visitors / max) * 100)
           return (
-            <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+            <div key={d.date} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
               <div style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'flex-end' }}>
                 <div
                   title={`${d.date}: ${d.visitors}`}

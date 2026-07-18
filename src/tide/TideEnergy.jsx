@@ -73,7 +73,7 @@ export default function TideEnergy() {
 
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: 96, marginTop: 16 }}>
         {data.days.map((d) => (
-          <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minWidth: 0 }}>
+          <div key={d.date} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minWidth: 0 }}>
             <div style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 3 }}>
               <div title={`used ${fmt(d.usage)} kWh`} style={{
                 width: '42%', height: `${Math.max(d.usage ? 6 : 2, (d.usage / max) * 100)}%`,
