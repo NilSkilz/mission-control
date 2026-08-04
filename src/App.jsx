@@ -9,6 +9,7 @@ import TideHouse from './tide/TideHouse'
 import TideLifts from './tide/TideLifts'
 import TideJarvis from './tide/TideJarvis'
 import TidePeople from './tide/TidePeople'
+import TideHealth from './tide/TideHealth'
 import TideSystem from './tide/TideSystem'
 import SystemFrame from './tide/SystemFrame'
 import LoginScreen from './components/LoginScreen'
@@ -89,6 +90,7 @@ function AppRoutes() {
       <Route path="/lifts" element={<Family><TideLifts /></Family>} />
       <Route path="/jarvis" element={<Family><TideJarvis /></Family>} />
       <Route path="/people" element={<Family requireParent><TidePeople /></Family>} />
+      <Route path="/health" element={<Family requireParent><TideHealth /></Family>} />
 
       {/* system — Tide-styled launcher (all users; services list is role-scoped server-side). Legacy dashboards under it stay parent-only. */}
       <Route path="/system" element={<Family><TideSystem /></Family>} />

@@ -70,6 +70,17 @@ export function verifyToken(token) {
 export function authGuard(req, res, next) {
   if (req.method === 'OPTIONS') return next()
   if (req.originalUrl.startsWith('/api/media/cinema/image')) return next()
+  // Jarvis (server-side, on the LXC) authenticates with a shared key so it can
+  // log food/exercise from a Telegram chat session and run the meal-nudge cron.
+  // It acts on behalf of a named user, passed as a username in X-Jarvis-User.
+  const jarvisKey = req.headers['x-jarvis-key']
+  const expectedKey = process.env.JARVIS_API_KEY
+  if (jarvisKey && expectedKey && jarvisKey.length === expectedKey.length &&
+      crypto.timingSafeEqual(Buffer.from(jarvisKey), Buffer.from(expectedKey))) {
+    req.isJarvis = true
+    req.jarvisUser = (req.headers['x-jarvis-user'] || '').toLowerCase()
+    return next()
+  }
   const header = req.headers.authorization || ''
   const token = header.startsWith('Bearer ') ? header.slice(7) : null
   const payload = verifyToken(token)

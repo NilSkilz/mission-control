@@ -624,3 +624,23 @@ export async function savePushSubscription(sub) {
 export async function removePushSubscription(endpoint) {
   return request('/push/unsubscribe', { method: 'POST', body: { endpoint } })
 }
+
+// ==================== HEALTH (calorie + exercise, parents only) ====================
+export async function getHealthDay(date) {
+  return request(`/health/day${date ? `?date=${encodeURIComponent(date)}` : ''}`)
+}
+export async function addFood(entry) {
+  return request('/health/food', { method: 'POST', body: entry })
+}
+export async function addExercise(entry) {
+  return request('/health/exercise', { method: 'POST', body: entry })
+}
+export async function deleteFood(id) {
+  await request(`/health/food/${id}`, { method: 'DELETE' })
+}
+export async function deleteExercise(id) {
+  await request(`/health/exercise/${id}`, { method: 'DELETE' })
+}
+export async function setCalorieTarget(userId, calorieTarget) {
+  return request('/health/target', { method: 'PATCH', body: { userId, calorieTarget } })
+}

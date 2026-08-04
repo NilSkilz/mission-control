@@ -167,6 +167,33 @@ db.exec(`
     updatedAt TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_push_user ON pushSubscriptions(userId);
+
+  -- Calorie + exercise tracking (parents only; gated in the route + nav).
+  CREATE TABLE IF NOT EXISTS foodLog (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL REFERENCES users(id),
+    date TEXT NOT NULL,                       -- YYYY-MM-DD, local day
+    mealType TEXT NOT NULL DEFAULT 'snack',   -- breakfast|lunch|dinner|snack
+    description TEXT NOT NULL,
+    calories INTEGER NOT NULL DEFAULT 0,
+    loggedBy TEXT,                            -- 'self' (UI) | 'jarvis' (chat)
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_food_user_date ON foodLog(userId, date);
+
+  CREATE TABLE IF NOT EXISTS exerciseLog (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL REFERENCES users(id),
+    date TEXT NOT NULL,
+    description TEXT NOT NULL,
+    minutes INTEGER,
+    calories INTEGER NOT NULL DEFAULT 0,      -- calories burned
+    loggedBy TEXT,
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_exercise_user_date ON exerciseLog(userId, date);
 `);
 
 // Seed the family on first run (matches the old mock users, plus Tide person colours)
@@ -288,6 +315,19 @@ const STARTER_PASSWORDS = { rob: 'family123', aimee: 'family123', dexter: 'dexte
 for (const u of db.prepare('SELECT id, username, passwordHash FROM users').all()) {
   if (!u.passwordHash && STARTER_PASSWORDS[u.username]) {
     db.prepare('UPDATE users SET passwordHash = ? WHERE id = ?').run(hashPassword(STARTER_PASSWORDS[u.username]), u.id);
+  }
+}
+
+// Health tracking: per-user daily calorie target (null = not tracking).
+// Seed the two parents with sensible weight-loss defaults; both editable in the
+// UI. Kids stay null and never see the feature.
+if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'calorieTarget')) {
+  db.exec('ALTER TABLE users ADD COLUMN calorieTarget INTEGER');
+  const TARGET_DEFAULTS = { rob: 1900, aimee: 1500 };
+  for (const u of db.prepare("SELECT id, username FROM users WHERE role = 'parent'").all()) {
+    if (TARGET_DEFAULTS[u.username]) {
+      db.prepare('UPDATE users SET calorieTarget = ? WHERE id = ?').run(TARGET_DEFAULTS[u.username], u.id);
+    }
   }
 }
 

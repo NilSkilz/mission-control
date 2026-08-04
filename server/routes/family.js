@@ -579,4 +579,139 @@ router.delete('/film-requests/:id', (req, res) => {
   res.status(204).end();
 });
 
+// ==================== HEALTH (calorie + exercise tracking, PARENTS ONLY) ====================
+// Rob + Aimee track calories/exercise for weight loss. The kids must never see
+// this: nav is parentsOnly, the route is role-gated, and the API 403s children.
+// Rob logs by chat (Jarvis POSTs with the shared key on his behalf); both
+// parents can also log in the UI. `date` is a local YYYY-MM-DD day string.
+
+// Resolve who is acting: a logged-in user (req.userId), or the user Jarvis is
+// acting for (req.jarvisUser, a username). Returns the full user row or null.
+function actingUser(req) {
+  const users = list('users');
+  if (req.isJarvis) return users.find((u) => u.username === req.jarvisUser) || null;
+  return users.find((u) => u.id === req.userId) || null;
+}
+
+// Guard: only parents reach health data. Writes a 401/403 and returns null on
+// failure, so callers do `const me = requireParent(req, res); if (!me) return;`.
+function requireParent(req, res) {
+  const me = actingUser(req);
+  if (!me) { res.status(401).json({ error: 'unknown user' }); return null; }
+  if (me.role !== 'parent') { res.status(403).json({ error: 'parents only' }); return null; }
+  return me;
+}
+
+// Which parent a log entry is for: an explicit parent userId, else the actor.
+function targetParentId(req, actor) {
+  if (req.body.userId && req.body.userId !== actor.id) {
+    const t = list('users').find((u) => u.id === req.body.userId);
+    if (!t || t.role !== 'parent') return null;
+    return t.id;
+  }
+  return actor.id;
+}
+
+const localDay = (d) => new Date(d).toLocaleDateString('en-CA'); // YYYY-MM-DD
+const todayLocal = () => localDay(new Date());
+
+// GET /health/day?date=YYYY-MM-DD  -> both parents' totals, entries, 7-day trend
+router.get('/health/day', (req, res) => {
+  if (!requireParent(req, res)) return;
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '') ? req.query.date : todayLocal();
+  const parents = list('users').filter((u) => u.role === 'parent');
+
+  const foodFor = db.prepare('SELECT * FROM foodLog WHERE userId=? AND date=? ORDER BY createdAt');
+  const exFor = db.prepare('SELECT * FROM exerciseLog WHERE userId=? AND date=? ORDER BY createdAt');
+  const sumFood = db.prepare('SELECT COALESCE(SUM(calories),0) n FROM foodLog WHERE userId=? AND date=?');
+  const sumEx = db.prepare('SELECT COALESCE(SUM(calories),0) n FROM exerciseLog WHERE userId=? AND date=?');
+
+  // 7 days ending on `date`
+  const days = [];
+  const base = new Date(date + 'T12:00:00');
+  for (let i = 6; i >= 0; i--) { const d = new Date(base); d.setDate(d.getDate() - i); days.push(localDay(d)); }
+
+  const users = parents.map((u) => {
+    const food = foodFor.all(u.id, date);
+    const exercise = exFor.all(u.id, date);
+    const eaten = food.reduce((s, f) => s + f.calories, 0);
+    const burned = exercise.reduce((s, e) => s + e.calories, 0);
+    const week = days.map((d) => ({ date: d, eaten: sumFood.get(u.id, d).n, burned: sumEx.get(u.id, d).n }));
+    return {
+      id: u.id, name: u.displayName, color: u.color, target: u.calorieTarget,
+      eaten, burned, net: eaten - burned, food, exercise, week,
+    };
+  });
+  res.json({ date, today: todayLocal(), users });
+});
+
+// POST /health/food  { description, calories, mealType?, date?, userId? }
+router.post('/health/food', (req, res) => {
+  const me = requireParent(req, res); if (!me) return;
+  const { description, calories } = req.body;
+  if (!description || calories == null || isNaN(Number(calories))) {
+    return res.status(400).json({ error: 'description and calories required' });
+  }
+  const userId = targetParentId(req, me);
+  if (!userId) return res.status(400).json({ error: 'invalid user' });
+  const valid = ['breakfast', 'lunch', 'dinner', 'snack'];
+  const row = create('foodLog', {
+    userId,
+    date: /^\d{4}-\d{2}-\d{2}$/.test(req.body.date || '') ? req.body.date : todayLocal(),
+    mealType: valid.includes(req.body.mealType) ? req.body.mealType : 'snack',
+    description: String(description).slice(0, 300),
+    calories: Math.max(0, Math.round(Number(calories))),
+    loggedBy: req.isJarvis ? 'jarvis' : 'self',
+  });
+  res.status(201).json(row);
+});
+
+// POST /health/exercise  { description, calories, minutes?, date?, userId? }
+router.post('/health/exercise', (req, res) => {
+  const me = requireParent(req, res); if (!me) return;
+  const { description, calories } = req.body;
+  if (!description || calories == null || isNaN(Number(calories))) {
+    return res.status(400).json({ error: 'description and calories required' });
+  }
+  const userId = targetParentId(req, me);
+  if (!userId) return res.status(400).json({ error: 'invalid user' });
+  const row = create('exerciseLog', {
+    userId,
+    date: /^\d{4}-\d{2}-\d{2}$/.test(req.body.date || '') ? req.body.date : todayLocal(),
+    description: String(description).slice(0, 300),
+    minutes: req.body.minutes != null ? Math.max(0, Math.round(Number(req.body.minutes))) : null,
+    calories: Math.max(0, Math.round(Number(calories))),
+    loggedBy: req.isJarvis ? 'jarvis' : 'self',
+  });
+  res.status(201).json(row);
+});
+
+// PATCH /health/target  { userId?, calorieTarget }  (null clears / stops tracking)
+router.patch('/health/target', (req, res) => {
+  const me = requireParent(req, res); if (!me) return;
+  const userId = targetParentId(req, me);
+  if (!userId) return res.status(400).json({ error: 'invalid user' });
+  const t = req.body.calorieTarget;
+  const value = t == null || t === '' ? null : Math.max(0, Math.round(Number(t)));
+  if (value != null && isNaN(value)) return res.status(400).json({ error: 'invalid target' });
+  db.prepare('UPDATE users SET calorieTarget=?, updatedAt=? WHERE id=?')
+    .run(value, new Date().toISOString(), userId);
+  res.json({ id: userId, calorieTarget: value });
+});
+
+// DELETE entries — only a parent can, and only from a parent's log.
+function deleteHealthEntry(table) {
+  return (req, res) => {
+    if (!requireParent(req, res)) return;
+    const row = get(table, req.params.id);
+    if (!row) return res.status(404).json({ error: 'not found' });
+    const owner = list('users').find((u) => u.id === row.userId);
+    if (!owner || owner.role !== 'parent') return res.status(403).json({ error: 'forbidden' });
+    remove(table, req.params.id);
+    res.status(204).end();
+  };
+}
+router.delete('/health/food/:id', deleteHealthEntry('foodLog'));
+router.delete('/health/exercise/:id', deleteHealthEntry('exerciseLog'));
+
 export default router;
