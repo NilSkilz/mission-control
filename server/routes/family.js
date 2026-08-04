@@ -686,6 +686,37 @@ router.post('/health/exercise', (req, res) => {
   res.status(201).json(row);
 });
 
+// POST /health/steps  { steps, date?, userId? }
+// iPhone Health -> Tide bridge. An Apple Shortcut reads the day's step count and
+// POSTs it here (via cracky.co.uk, X-Jarvis-Key). Steps become a single
+// "burned" exercise row per user/day, UPSERTED so re-syncing the day replaces
+// it rather than stacking. kcal ~= steps * STEP_KCAL (env-tunable).
+const STEP_KCAL = Number(process.env.STEP_KCAL || 0.045);
+router.post('/health/steps', (req, res) => {
+  const me = requireParent(req, res); if (!me) return;
+  const steps = Number(req.body.steps);
+  if (req.body.steps == null || isNaN(steps) || steps < 0) {
+    return res.status(400).json({ error: 'steps required' });
+  }
+  const userId = targetParentId(req, me);
+  if (!userId) return res.status(400).json({ error: 'invalid user' });
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(req.body.date || '') ? req.body.date : todayLocal();
+  const stepsInt = Math.max(0, Math.round(steps));
+  const kcal = Math.round(stepsInt * STEP_KCAL);
+  const desc = `${stepsInt.toLocaleString('en-GB')} steps`;
+  const now = new Date().toISOString();
+  const existing = db.prepare("SELECT id FROM exerciseLog WHERE userId=? AND date=? AND loggedBy='steps'").get(userId, date);
+  if (existing) {
+    db.prepare('UPDATE exerciseLog SET description=?, calories=?, updatedAt=? WHERE id=?')
+      .run(desc, kcal, now, existing.id);
+    return res.json({ id: existing.id, userId, date, steps: stepsInt, calories: kcal, updated: true });
+  }
+  const row = create('exerciseLog', {
+    userId, date, description: desc, minutes: null, calories: kcal, loggedBy: 'steps',
+  });
+  res.status(201).json({ ...row, steps: stepsInt });
+});
+
 // PATCH /health/target  { userId?, calorieTarget }  (null clears / stops tracking)
 router.patch('/health/target', (req, res) => {
   const me = requireParent(req, res); if (!me) return;
