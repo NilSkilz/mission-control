@@ -8,26 +8,52 @@ import {
 const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack']
 const UNDER = '#5fae7f' // calm green: net within target
 const OVER = 'var(--tide-accent-ink)' // coral: over target
+const STEPS = '#4fb477' // green: steps ring around the calorie dial
 
 function timeStr(iso) {
   return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 }
 
-// Big calorie budget card: the ring reflects net (eaten - burned) against target.
+// Concentric green ring showing steps against the daily goal. Sits outside the
+// calorie ring so both read as one dial.
+function StepsRing({ steps, goal, size, stroke }) {
+  const r = (size - stroke) / 2
+  const c = 2 * Math.PI * r
+  const frac = goal > 0 ? Math.min(steps / goal, 1) : 0
+  const mid = size / 2
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ position: 'absolute', inset: 0 }}>
+      <circle cx={mid} cy={mid} r={r} fill="none" stroke="var(--tide-hair)" strokeWidth={stroke} />
+      <circle
+        cx={mid} cy={mid} r={r} fill="none" stroke={STEPS} strokeWidth={stroke} strokeLinecap="round"
+        strokeDasharray={`${c * frac} ${c}`} transform={`rotate(-90 ${mid} ${mid})`}
+        style={{ transition: 'stroke-dasharray 500ms ease' }}
+      />
+    </svg>
+  )
+}
+
+// Big calorie budget card: the inner ring reflects net (eaten - burned) against
+// target; the outer green ring reflects steps against the daily goal.
 function BudgetCard({ person }) {
-  const { target, eaten, burned, net } = person
+  const { target, eaten, burned, net, steps, stepGoal } = person
   const remaining = target != null ? target - net : null
   const over = remaining != null && remaining < 0
+  const hasSteps = steps != null
+  const OUTER = 150
   return (
     <div className="tide-card" style={{ padding: 20, display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
-      <div style={{ position: 'relative' }}>
-        <Ring done={target ? Math.min(net, target) : 0} total={target || 1} size={128} stroke={11} />
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ fontSize: 26, fontWeight: 700, lineHeight: 1, color: over ? OVER : 'var(--tide-ink)' }}>
-            {remaining != null ? Math.abs(remaining) : net}
-          </div>
-          <div className="tide-sub" style={{ fontSize: 11, marginTop: 3 }}>
-            {remaining == null ? 'kcal net' : over ? 'kcal over' : 'kcal left'}
+      <div style={{ position: 'relative', width: OUTER, height: OUTER, flex: 'none' }}>
+        <StepsRing steps={steps || 0} goal={stepGoal || 10000} size={OUTER} stroke={8} />
+        <div style={{ position: 'absolute', inset: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Ring done={target ? Math.min(net, target) : 0} total={target || 1} size={128} stroke={11} />
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ fontSize: 26, fontWeight: 700, lineHeight: 1, color: over ? OVER : 'var(--tide-ink)' }}>
+              {remaining != null ? Math.abs(remaining) : net}
+            </div>
+            <div className="tide-sub" style={{ fontSize: 11, marginTop: 3 }}>
+              {remaining == null ? 'kcal net' : over ? 'kcal over' : 'kcal left'}
+            </div>
           </div>
         </div>
       </div>
@@ -36,6 +62,9 @@ function BudgetCard({ person }) {
         <Stat label="exercise" value={burned ? `-${burned} kcal` : '0 kcal'} />
         <Stat label="net" value={`${net} kcal`} strong />
         <Stat label="target" value={target != null ? `${target} kcal` : 'not set'} muted />
+        {hasSteps && (
+          <Stat label="steps" value={stepGoal ? `${(steps || 0).toLocaleString('en-GB')} / ${stepGoal.toLocaleString('en-GB')}` : (steps || 0).toLocaleString('en-GB')} />
+        )}
       </div>
     </div>
   )
@@ -161,15 +190,53 @@ function TargetEditor({ person, onSave }) {
   )
 }
 
+// Add n days to a YYYY-MM-DD string, returning YYYY-MM-DD (local).
+function addDays(dateStr, n) {
+  const d = new Date(dateStr + 'T12:00:00')
+  d.setDate(d.getDate() + n)
+  return d.toLocaleDateString('en-CA')
+}
+
+// Human label for the viewed day relative to today.
+function dayLabel(date, today) {
+  if (!date) return 'today'
+  if (date === today) return 'today'
+  if (date === addDays(today, -1)) return 'yesterday'
+  return new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+}
+
+// Prev/next controls to step through the last 7 days. Capped: can't go past
+// today, or more than 6 days back.
+function DayNav({ date, today, onChange }) {
+  if (!date || !today) return null
+  const minDate = addDays(today, -6)
+  const atOldest = date <= minDate
+  const atNewest = date >= today
+  const btn = (disabled) => ({
+    background: 'none', border: '1px solid var(--tide-hair)', borderRadius: 8,
+    width: 34, height: 34, cursor: disabled ? 'default' : 'pointer',
+    color: disabled ? 'var(--tide-faint)' : 'var(--tide-ink)', fontSize: 16, lineHeight: 1,
+    opacity: disabled ? 0.4 : 1,
+  })
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 14 }}>
+      <button aria-label="previous day" disabled={atOldest} style={btn(atOldest)} onClick={() => !atOldest && onChange(addDays(date, -1))}>‹</button>
+      <span style={{ fontSize: 15, fontWeight: 600, minWidth: 120, textAlign: 'center', textTransform: 'capitalize' }}>{dayLabel(date, today)}</span>
+      <button aria-label="next day" disabled={atNewest} style={btn(atNewest)} onClick={() => !atNewest && onChange(addDays(date, 1))}>›</button>
+    </div>
+  )
+}
+
 export default function TideHealth() {
   const { user } = useUser()
-  const [state, setState] = useState({ loading: true, users: [] })
+  const [state, setState] = useState({ loading: true, users: [], date: null, today: null })
   const [selectedId, setSelectedId] = useState(user.id)
+  const [viewDate, setViewDate] = useState(null) // null = today
 
   const reload = useCallback(async () => {
-    const data = await getHealthDay()
-    setState({ loading: false, users: data.users || [] })
-  }, [])
+    const data = await getHealthDay(viewDate || undefined)
+    setState({ loading: false, users: data.users || [], date: data.date, today: data.today })
+  }, [viewDate])
   useEffect(() => { reload() }, [reload])
 
   if (state.loading) return <p className="tide-sub" style={{ paddingTop: 20 }}>loading…</p>
@@ -178,8 +245,10 @@ export default function TideHealth() {
   const person = parents.find((p) => p.id === selectedId) || parents.find((p) => p.id === user.id) || parents[0]
   if (!person) return <EmptyHint>no data.</EmptyHint>
 
-  const logFood = async (entry) => { await addFood({ ...entry, userId: person.id }); reload() }
-  const logExercise = async (entry) => { await addExercise({ ...entry, userId: person.id }); reload() }
+  const isToday = state.date === state.today
+  const entryDate = state.date // log against the day being viewed
+  const logFood = async (entry) => { await addFood({ ...entry, userId: person.id, date: entryDate }); reload() }
+  const logExercise = async (entry) => { await addExercise({ ...entry, userId: person.id, date: entryDate }); reload() }
   const saveTarget = async (t) => { await setCalorieTarget(person.id, t); reload() }
   const removeFood = async (id) => { await deleteFood(id); reload() }
   const removeExercise = async (id) => { await deleteExercise(id); reload() }
@@ -191,7 +260,7 @@ export default function TideHealth() {
   return (
     <div style={{ maxWidth: 680 }}>
       <div className="tide-greet" style={{ fontSize: 'clamp(24px,5vw,30px)' }}><span className="tide-grad">health</span></div>
-      <p className="tide-sub" style={{ marginTop: 6 }}>calories in, exercise out, today · tell Jarvis what you ate and it lands here</p>
+      <p className="tide-sub" style={{ marginTop: 6 }}>calories in, exercise out · tell Jarvis what you ate and it lands here</p>
 
       {parents.length > 1 && (
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
@@ -204,6 +273,8 @@ export default function TideHealth() {
         </div>
       )}
 
+      <DayNav date={state.date} today={state.today} onChange={setViewDate} />
+
       <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <BudgetCard person={person} />
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -214,7 +285,7 @@ export default function TideHealth() {
         <AddExercise onAdd={logExercise} />
 
         <div className="tide-card" style={{ padding: 16 }}>
-          <Label>today's food</Label>
+          <Label>{isToday ? "today's food" : 'food'}</Label>
           {foodByMeal.length === 0 && <EmptyHint>nothing logged yet.</EmptyHint>}
           {foodByMeal.map((g) => (
             <div key={g.meal} style={{ marginTop: 8 }}>
@@ -228,7 +299,7 @@ export default function TideHealth() {
         </div>
 
         <div className="tide-card" style={{ padding: 16 }}>
-          <Label>today's exercise</Label>
+          <Label>{isToday ? "today's exercise" : 'exercise'}</Label>
           {person.exercise.length === 0 && <EmptyHint>nothing logged yet.</EmptyHint>}
           {person.exercise.map((e) => (
             <EntryRow key={e.id} left={timeStr(e.createdAt)}

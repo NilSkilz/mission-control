@@ -615,6 +615,11 @@ function targetParentId(req, actor) {
 const localDay = (d) => new Date(d).toLocaleDateString('en-CA'); // YYYY-MM-DD
 const todayLocal = () => localDay(new Date());
 
+// Daily step goal for the health ring (env-tunable, mirrors STEP_KCAL below).
+const STEP_GOAL = Number(process.env.STEP_GOAL || 10000);
+// Pull the step count out of the day's steps row (stored as a "12,345 steps" desc).
+const parseSteps = (row) => (row ? parseInt(String(row.description).replace(/[^0-9]/g, ''), 10) || 0 : 0);
+
 // GET /health/day?date=YYYY-MM-DD  -> both parents' totals, entries, 7-day trend
 router.get('/health/day', (req, res) => {
   if (!requireParent(req, res)) return;
@@ -625,6 +630,7 @@ router.get('/health/day', (req, res) => {
   const exFor = db.prepare('SELECT * FROM exerciseLog WHERE userId=? AND date=? ORDER BY createdAt');
   const sumFood = db.prepare('SELECT COALESCE(SUM(calories),0) n FROM foodLog WHERE userId=? AND date=?');
   const sumEx = db.prepare('SELECT COALESCE(SUM(calories),0) n FROM exerciseLog WHERE userId=? AND date=?');
+  const stepsFor = db.prepare("SELECT description FROM exerciseLog WHERE userId=? AND date=? AND loggedBy='steps'");
 
   // 7 days ending on `date`
   const days = [];
@@ -636,10 +642,11 @@ router.get('/health/day', (req, res) => {
     const exercise = exFor.all(u.id, date);
     const eaten = food.reduce((s, f) => s + f.calories, 0);
     const burned = exercise.reduce((s, e) => s + e.calories, 0);
+    const steps = parseSteps(stepsFor.get(u.id, date));
     const week = days.map((d) => ({ date: d, eaten: sumFood.get(u.id, d).n, burned: sumEx.get(u.id, d).n }));
     return {
       id: u.id, name: u.displayName, color: u.color, target: u.calorieTarget,
-      eaten, burned, net: eaten - burned, food, exercise, week,
+      eaten, burned, net: eaten - burned, steps, stepGoal: STEP_GOAL, food, exercise, week,
     };
   });
   res.json({ date, today: todayLocal(), users });
