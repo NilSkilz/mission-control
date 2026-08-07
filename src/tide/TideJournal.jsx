@@ -51,10 +51,12 @@ function MoodPicker({ value, onPick, size = 46 }) {
   )
 }
 
-// Sparse line chart of average daily mood across the range. Nulls (no entry)
-// are gaps; each logged day is a dot coloured by its mood.
+// Line chart of average daily mood across the range. Time runs left->right along
+// the bottom; mood runs high (top) -> low (bottom) up the side. Nulls (no entry)
+// are gaps; each logged day is a dot coloured by its mood. The viewBox keeps a
+// fixed aspect and scales uniformly, so dots stay round (no horizontal stretch).
 function MoodChart({ mood, range }) {
-  const W = 320, H = 120, padL = 16, padR = 8, padT = 12, padB = 20
+  const W = 640, H = 240, padL = 52, padR = 16, padT = 18, padB = 34
   const n = mood.length
   const plotW = W - padL - padR
   const plotH = H - padT - padB
@@ -73,23 +75,27 @@ function MoodChart({ mood, range }) {
         <EmptyHint>no mood logged in this window yet.</EmptyHint>
       ) : (
         <>
-          <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" style={{ marginTop: 6, overflow: 'visible' }}>
+          <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="auto" preserveAspectRatio="xMidYMid meet" style={{ marginTop: 6, display: 'block', overflow: 'visible' }}>
+            {/* vertical axis title: mood, high -> low */}
+            <text x={13} y={padT} fontSize="11" fontWeight="600" fill="var(--tide-faint)" textAnchor="middle">high</text>
+            <text x={13} y={H - padB + 2} fontSize="11" fontWeight="600" fill="var(--tide-faint)" textAnchor="middle">low</text>
+            {/* gridlines + a mood face marking each level */}
             {[1, 2, 3, 4, 5].map((lvl) => (
               <g key={lvl}>
-                <line x1={padL} x2={W - padR} y1={y(lvl)} y2={y(lvl)} stroke="var(--tide-hair)" strokeWidth="1" opacity={lvl === 3 ? 0.7 : 0.35} />
-                <text x={0} y={y(lvl) + 3} fontSize="9" fill="var(--tide-faint)">{moodOf(lvl).emoji}</text>
+                <line x1={padL} x2={W - padR} y1={y(lvl)} y2={y(lvl)} stroke="var(--tide-hair)" strokeWidth="1" opacity={lvl === 3 ? 0.6 : 0.28} />
+                <text x={padL - 12} y={y(lvl) + 5} fontSize="15" textAnchor="middle">{moodOf(lvl).emoji}</text>
               </g>
             ))}
             {pts.length > 1 && (
-              <polyline points={line} fill="none" stroke="var(--tide-accent-ink)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" opacity="0.8" />
+              <polyline points={line} fill="none" stroke="var(--tide-accent-ink)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" opacity="0.85" />
             )}
             {pts.map((p) => (
-              <circle key={p.i} cx={p.cx} cy={p.cy} r={pts.length > 40 ? 2.5 : 4} fill={moodOf(p.avg).color} stroke="var(--tide-bg, #fff)" strokeWidth="1">
+              <circle key={p.i} cx={p.cx} cy={p.cy} r={pts.length > 40 ? 3 : 5} fill={moodOf(p.avg).color} stroke="var(--tide-bg, #fff)" strokeWidth="1.5">
                 <title>{`${dateStr(p.date + 'T12:00:00')}: ${moodOf(p.avg).label} (${p.avg})`}</title>
               </circle>
             ))}
           </svg>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2, paddingLeft: 44 }}>
             <span className="tide-sub" style={{ fontSize: 11 }}>{fmt(first)}</span>
             <span className="tide-sub" style={{ fontSize: 11 }}>{fmt(last)}</span>
           </div>
