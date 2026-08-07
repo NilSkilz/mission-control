@@ -56,7 +56,7 @@ function MoodPicker({ value, onPick, size = 46 }) {
 // are gaps; each logged day is a dot coloured by its mood. The viewBox keeps a
 // fixed aspect and scales uniformly, so dots stay round (no horizontal stretch).
 function MoodChart({ mood, range }) {
-  const W = 640, H = 240, padL = 52, padR = 16, padT = 18, padB = 34
+  const W = 640, H = 240, padL = 30, padR = 16, padT = 18, padB = 34
   const n = mood.length
   const plotW = W - padL - padR
   const plotH = H - padT - padB
@@ -79,12 +79,9 @@ function MoodChart({ mood, range }) {
             {/* vertical axis title: mood, high -> low */}
             <text x={13} y={padT} fontSize="11" fontWeight="600" fill="var(--tide-faint)" textAnchor="middle">high</text>
             <text x={13} y={H - padB + 2} fontSize="11" fontWeight="600" fill="var(--tide-faint)" textAnchor="middle">low</text>
-            {/* gridlines + a mood face marking each level */}
+            {/* gridlines at each mood level */}
             {[1, 2, 3, 4, 5].map((lvl) => (
-              <g key={lvl}>
-                <line x1={padL} x2={W - padR} y1={y(lvl)} y2={y(lvl)} stroke="var(--tide-hair)" strokeWidth="1" opacity={lvl === 3 ? 0.6 : 0.28} />
-                <text x={padL - 12} y={y(lvl) + 5} fontSize="15" textAnchor="middle">{moodOf(lvl).emoji}</text>
-              </g>
+              <line key={lvl} x1={padL} x2={W - padR} y1={y(lvl)} y2={y(lvl)} stroke="var(--tide-hair)" strokeWidth="1" opacity={lvl === 3 ? 0.6 : 0.28} />
             ))}
             {pts.length > 1 && (
               <polyline points={line} fill="none" stroke="var(--tide-accent-ink)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" opacity="0.85" />
