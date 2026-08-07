@@ -644,3 +644,17 @@ export async function deleteExercise(id) {
 export async function setCalorieTarget(userId, calorieTarget) {
   return request('/health/target', { method: 'PATCH', body: { userId, calorieTarget } })
 }
+
+// ==================== JOURNAL + MOOD (parents only, per-person private) ====================
+export async function getJournal(range = 30) {
+  return request(`/journal?range=${encodeURIComponent(range)}`)
+}
+export async function addJournalEntry(entry) {
+  return request('/journal', { method: 'POST', body: entry })
+}
+export async function updateJournalEntry(id, patch) {
+  return request(`/journal/${id}`, { method: 'PATCH', body: patch })
+}
+export async function deleteJournalEntry(id) {
+  await request(`/journal/${id}`, { method: 'DELETE' })
+}

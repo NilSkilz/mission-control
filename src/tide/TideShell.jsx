@@ -16,6 +16,7 @@ const ICONS = {
   system: 'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6',
   lift: 'M4 13l1.8-5.2A2 2 0 0 1 7.7 6.5h8.6a2 2 0 0 1 1.9 1.3L20 13m0 0v4h-2v-1H6v1H4v-4m16 0H4m4 3.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m11 0a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0',
   health: 'M3 12h4l2-6 4 12 2-6h6',
+  journal: 'M4 4h11l5 5v11H4zM15 4v5h5M8 13h8M8 17h8M8 9h3',
 }
 
 function NavIcon({ name }) {
@@ -48,6 +49,7 @@ const OVERFLOW_NAV = NAV.filter((i) => !PRIMARY_KEYS.includes(i.key))
 // Parent-only management screens — sheet only.
 const PARENT_NAV = [
   { key: 'health', label: 'health', to: '/health', icon: 'health' },
+  { key: 'journal', label: 'journal', to: '/journal', icon: 'journal' },
   { key: 'people', label: 'people', to: '/people', icon: 'people' },
 ]
 
@@ -145,6 +147,9 @@ export default function TideShell({ children }) {
             ))}
             {isParent && (
               <Link to="/health" className={active === 'health' ? 'on' : ''}>health</Link>
+            )}
+            {isParent && (
+              <Link to="/journal" className={active === 'journal' ? 'on' : ''}>journal</Link>
             )}
             {isParent && (
               <Link to="/people" className={active === 'people' ? 'on' : ''}>people</Link>

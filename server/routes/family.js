@@ -752,4 +752,106 @@ function deleteHealthEntry(table) {
 router.delete('/health/food/:id', deleteHealthEntry('foodLog'));
 router.delete('/health/exercise/:id', deleteHealthEntry('exerciseLog'));
 
+// ==================== JOURNAL + MOOD (PARENTS ONLY, PER-PERSON PRIVATE) ====================
+// Rob + Aimee each keep a private journal and mood log. Unlike health, there is
+// NO cross-parent access: every query is scoped to the acting user's own id, so
+// neither parent (nor the kids, who are role-gated out entirely) can read the
+// other's entries. Writes always land against the acting user — there is no
+// `userId` override here on purpose. A row can be a quick mood check-in, a
+// written entry, or both (see journalEntries in familyDb.js).
+
+const MOOD_RANGES = { 7: 7, 30: 30, 90: 90 };
+const clampMood = (m) => {
+  if (m == null || m === '') return null;
+  const n = Math.round(Number(m));
+  if (isNaN(n) || n < 1 || n > 5) return undefined; // undefined => invalid
+  return n;
+};
+
+// GET /journal?range=30  -> own written entries (newest first) + a per-day mood
+// series across the range (avg mood per day, null on empty days).
+router.get('/journal', (req, res) => {
+  const me = requireParent(req, res); if (!me) return;
+  const range = MOOD_RANGES[String(req.query.range)] || 30;
+
+  const entries = db.prepare(
+    `SELECT id, date, mood, title, body, loggedBy, createdAt, updatedAt
+       FROM journalEntries
+      WHERE userId = ? AND (body IS NOT NULL AND TRIM(body) != '')
+      ORDER BY createdAt DESC`
+  ).all(me.id);
+
+  // Build the full day axis [today-(range-1) .. today] so gaps render as gaps.
+  const days = [];
+  const base = new Date(todayLocal() + 'T12:00:00');
+  for (let i = range - 1; i >= 0; i--) { const d = new Date(base); d.setDate(d.getDate() - i); days.push(localDay(d)); }
+  const from = days[0];
+
+  const rows = db.prepare(
+    `SELECT date, AVG(mood) avg, COUNT(mood) count
+       FROM journalEntries
+      WHERE userId = ? AND mood IS NOT NULL AND date >= ?
+      GROUP BY date`
+  ).all(me.id, from);
+  const byDay = Object.fromEntries(rows.map((r) => [r.date, r]));
+  const mood = days.map((d) => ({
+    date: d,
+    avg: byDay[d] ? Math.round(byDay[d].avg * 10) / 10 : null,
+    count: byDay[d] ? byDay[d].count : 0,
+  }));
+
+  const latest = db.prepare(
+    `SELECT mood, date FROM journalEntries
+      WHERE userId = ? AND mood IS NOT NULL ORDER BY createdAt DESC LIMIT 1`
+  ).get(me.id);
+
+  res.json({ today: todayLocal(), range, entries, mood, latestMood: latest || null });
+});
+
+// POST /journal  { mood?, title?, body?, date? }  -> create an entry for ME.
+// Must carry at least a mood or a non-empty body.
+router.post('/journal', (req, res) => {
+  const me = requireParent(req, res); if (!me) return;
+  const mood = clampMood(req.body.mood);
+  if (mood === undefined) return res.status(400).json({ error: 'mood must be 1–5' });
+  const title = req.body.title != null ? String(req.body.title).slice(0, 200).trim() : null;
+  const body = req.body.body != null ? String(req.body.body).slice(0, 20000).trim() : null;
+  if (mood == null && !body) return res.status(400).json({ error: 'need a mood or something written' });
+  const row = create('journalEntries', {
+    userId: me.id,
+    date: /^\d{4}-\d{2}-\d{2}$/.test(req.body.date || '') ? req.body.date : todayLocal(),
+    mood,
+    title: title || null,
+    body: body || null,
+    loggedBy: req.isJarvis ? 'jarvis' : 'self',
+  });
+  res.status(201).json(row);
+});
+
+// PATCH /journal/:id  { mood?, title?, body? }  -> only my own entry.
+router.patch('/journal/:id', (req, res) => {
+  const me = requireParent(req, res); if (!me) return;
+  const row = get('journalEntries', req.params.id);
+  if (!row || row.userId !== me.id) return res.status(404).json({ error: 'not found' });
+  const patch = {};
+  if ('mood' in req.body) {
+    const mood = clampMood(req.body.mood);
+    if (mood === undefined) return res.status(400).json({ error: 'mood must be 1–5' });
+    patch.mood = mood;
+  }
+  if ('title' in req.body) patch.title = req.body.title ? String(req.body.title).slice(0, 200).trim() || null : null;
+  if ('body' in req.body) patch.body = req.body.body ? String(req.body.body).slice(0, 20000).trim() || null : null;
+  const updated = update('journalEntries', req.params.id, patch);
+  res.json(updated);
+});
+
+// DELETE /journal/:id  -> only my own entry (404 otherwise, so existence never leaks).
+router.delete('/journal/:id', (req, res) => {
+  const me = requireParent(req, res); if (!me) return;
+  const row = get('journalEntries', req.params.id);
+  if (!row || row.userId !== me.id) return res.status(404).json({ error: 'not found' });
+  remove('journalEntries', req.params.id);
+  res.status(204).end();
+});
+
 export default router;

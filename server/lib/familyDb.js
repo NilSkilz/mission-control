@@ -194,6 +194,25 @@ db.exec(`
     updatedAt TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_exercise_user_date ON exerciseLog(userId, date);
+
+  -- Private journal + mood tracking (parents only, and PER-PERSON private:
+  -- each parent only ever sees their own rows; enforced in the route by scoping
+  -- every query to the acting user's id. One table serves both jobs — a row can
+  -- be a quick mood check-in (mood set, body empty), a written entry (body set),
+  -- or both. The mood trend reads every row with a mood; the journal list reads
+  -- every row with a body.
+  CREATE TABLE IF NOT EXISTS journalEntries (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL REFERENCES users(id),
+    date TEXT NOT NULL,                       -- YYYY-MM-DD, local day the entry is "for"
+    mood INTEGER,                             -- 1..5 (1 rough … 5 great), null if none
+    title TEXT,
+    body TEXT,
+    loggedBy TEXT,                            -- 'self' (UI) | 'jarvis' (chat)
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_journal_user_date ON journalEntries(userId, date);
 `);
 
 // Seed the family on first run (matches the old mock users, plus Tide person colours)
