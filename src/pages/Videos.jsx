@@ -128,7 +128,8 @@ function VideoPlayer({ video, onClose }) {
   const videoRef = useRef(null);
   const [error, setError] = useState(null);
   
-  const videoUrl = `${API_URL}/api/videos/stream/${video.category}/${encodeURIComponent(video.filename)}`;
+  const token = localStorage.getItem('mission-control-token') || '';
+  const videoUrl = `${API_URL}/api/videos/stream/${video.category}/${encodeURIComponent(video.filename)}?t=${encodeURIComponent(token)}`;
   
   useEffect(() => {
     const handleKey = (e) => {

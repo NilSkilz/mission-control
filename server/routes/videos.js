@@ -3,11 +3,21 @@ import fs from 'fs/promises';
 import { createReadStream, statSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { get } from '../lib/familyDb.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const router = express.Router();
+
+// Parents only. The client hides the page from kids, but the API must too.
+router.use((req, res, next) => {
+  if (req.isJarvis) return next();
+  const me = req.userId ? get('users', req.userId) : null;
+  if (!me || me.role !== 'parent') return res.status(403).json({ success: false, error: 'parents only' });
+  next();
+});
+
 const VIDEOS_DIR = '/media/TheDuchy';
 const VIDEOS_JSON = path.join(__dirname, '../../db/theduchy-videos.json');
 
