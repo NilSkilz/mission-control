@@ -95,6 +95,19 @@ router.get('/stream/:category/:filename', async (req, res) => {
   }
 });
 
+// GET /api/videos/thumb/:name - Serve a local thumbnail (jpgs on the media disk,
+// named <index>.jpg, generated from theduchy.com art + extracted video frames)
+router.get('/thumb/:name', (req, res) => {
+  const safeName = path.basename(req.params.name)
+  if (!/^[\w-]+\.jpg$/.test(safeName)) {
+    return res.status(400).json({ success: false, error: 'Invalid name' })
+  }
+  const filePath = path.join(VIDEOS_DIR, 'thumbnails', safeName)
+  res.sendFile(filePath, { maxAge: '7d' }, (err) => {
+    if (err && !res.headersSent) res.status(404).json({ success: false, error: 'Thumbnail not found' })
+  })
+})
+
 // GET /api/videos/categories - List available categories
 router.get('/categories', async (req, res) => {
   try {

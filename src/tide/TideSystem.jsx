@@ -252,7 +252,12 @@ export default function TideSystem() {
     <div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
         <div className="tide-greet" style={{ fontSize: 'clamp(24px,5vw,30px)' }}><span className="tide-grad">system</span></div>
-        {isParent && <Link to="/system/dashboard" className="tide-pill" style={{ marginLeft: 'auto' }}>▦ dashboard</Link>}
+        {isParent && (
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Link to="/system/videos" className="tide-pill">▶ rope library</Link>
+            <Link to="/system/dashboard" className="tide-pill">▦ dashboard</Link>
+          </div>
+        )}
       </div>
       <p className="tide-sub" style={{ marginTop: 6 }}>quick links to everything running at home</p>
 

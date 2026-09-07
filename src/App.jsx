@@ -101,7 +101,7 @@ function AppRoutes() {
       <Route path="/system/admin" element={<System><SystemAdminPage /></System>} />
       <Route path="/system/documents" element={<System><DocumentsPage /></System>} />
       <Route path="/system/timeline" element={<System><TimelinePage /></System>} />
-      <Route path="/system/videos" element={<System><VideosPage /></System>} />
+      <Route path="/system/videos" element={<Family requireParent><VideosPage /></Family>} />
       <Route path="/system/orbital" element={<System><OrbitalDemo /></System>} />
       <Route path="/system/seasonal" element={<System><SeasonalDemo /></System>} />
 

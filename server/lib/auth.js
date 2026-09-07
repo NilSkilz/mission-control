@@ -83,8 +83,9 @@ export function authGuard(req, res, next) {
   }
   const header = req.headers.authorization || ''
   let token = header.startsWith('Bearer ') ? header.slice(7) : null
-  // <video src> can't set headers, so the video stream accepts the token as ?t=
-  if (!token && req.originalUrl.startsWith('/api/videos/stream/') && typeof req.query.t === 'string') token = req.query.t
+  // <video src> and <img src> can't set headers, so the video stream and its
+  // thumbnails accept the token as ?t=
+  if (!token && (req.originalUrl.startsWith('/api/videos/stream/') || req.originalUrl.startsWith('/api/videos/thumb/')) && typeof req.query.t === 'string') token = req.query.t
   const payload = verifyToken(token)
   if (!payload) return res.status(401).json({ error: 'authentication required' })
   req.userId = payload.uid
