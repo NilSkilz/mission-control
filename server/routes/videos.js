@@ -103,7 +103,9 @@ router.get('/thumb/:name', (req, res) => {
     return res.status(400).json({ success: false, error: 'Invalid name' })
   }
   const filePath = path.join(VIDEOS_DIR, 'thumbnails', safeName)
-  res.sendFile(filePath, { maxAge: '7d' }, (err) => {
+  // private: browser may cache, but shared caches (Cloudflare) must not — a
+  // public-cached thumb would be served without auth to anyone with the URL
+  res.sendFile(filePath, { cacheControl: false, headers: { 'Cache-Control': 'private, max-age=604800' } }, (err) => {
     if (err && !res.headersSent) res.status(404).json({ success: false, error: 'Thumbnail not found' })
   })
 })
