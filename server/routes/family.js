@@ -860,28 +860,34 @@ router.delete('/journal/:id', (req, res) => {
 // Either parent can add, reword or remove; addedBy/updatedAt keep provenance.
 // Kids never see it: nav is parent-gated, the route is role-gated, API 403s.
 
+// Every entry has a kind: a plain agreement, a soft limit (talk first) or a
+// hard limit (absolute no).
+const ENM_KINDS = ['agreement', 'soft', 'hard'];
+
 // GET /enm -> every agreement, oldest first, with the adder's display name.
 router.get('/enm', (req, res) => {
   if (!requireParent(req, res)) return;
   const rows = db.prepare(
-    `SELECT a.id, a.text, a.note, a.addedBy, a.createdAt, a.updatedAt, u.displayName AS addedByName
+    `SELECT a.id, a.text, a.note, a.kind, a.addedBy, a.createdAt, a.updatedAt, u.displayName AS addedByName
        FROM enmAgreements a LEFT JOIN users u ON u.id = a.addedBy
       ORDER BY a.createdAt ASC`
   ).all();
   res.json({ agreements: rows });
 });
 
-// POST /enm  { text, note? }
+// POST /enm  { text, note?, kind? }
 router.post('/enm', (req, res) => {
   const me = requireParent(req, res); if (!me) return;
   const text = String(req.body.text || '').slice(0, 1000).trim();
   if (!text) return res.status(400).json({ error: 'an agreement needs some words' });
   const note = req.body.note != null ? String(req.body.note).slice(0, 2000).trim() : null;
-  const row = create('enmAgreements', { text, note: note || null, addedBy: me.id });
+  const kind = req.body.kind != null ? String(req.body.kind) : 'agreement';
+  if (!ENM_KINDS.includes(kind)) return res.status(400).json({ error: `kind must be one of: ${ENM_KINDS.join(', ')}` });
+  const row = create('enmAgreements', { text, note: note || null, kind, addedBy: me.id });
   res.status(201).json(row);
 });
 
-// PATCH /enm/:id  { text?, note? } — shared list, so either parent can edit.
+// PATCH /enm/:id  { text?, note?, kind? } — shared list, so either parent can edit.
 router.patch('/enm/:id', (req, res) => {
   const me = requireParent(req, res); if (!me) return;
   const row = get('enmAgreements', req.params.id);
@@ -893,6 +899,11 @@ router.patch('/enm/:id', (req, res) => {
     patch.text = text;
   }
   if ('note' in req.body) patch.note = req.body.note ? String(req.body.note).slice(0, 2000).trim() || null : null;
+  if ('kind' in req.body) {
+    const kind = String(req.body.kind);
+    if (!ENM_KINDS.includes(kind)) return res.status(400).json({ error: `kind must be one of: ${ENM_KINDS.join(', ')}` });
+    patch.kind = kind;
+  }
   res.json(update('enmAgreements', req.params.id, patch));
 });
 
