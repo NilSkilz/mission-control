@@ -7,15 +7,17 @@ import { getEnmAgreements, addEnmAgreement, updateEnmAgreement, deleteEnmAgreeme
 // in writing instead of in one person's memory of a conversation. Kids never
 // see it (nav parent-gated, route + API role-gated).
 //
-// Entries come in three kinds: hard limits (absolute no, not negotiable in the
-// moment), soft limits (approach with care, talk first) and plain agreements.
+// Entries come in four kinds: hard limits (absolute no, not negotiable in the
+// moment), soft limits (approach with care, talk first), the messy list
+// (people neither of us plays with; text = the name) and plain agreements.
 
 const KINDS = {
-  hard: { label: 'hard limit', accent: '#d05a5a', section: 'hard limits', hint: 'absolute no. not up for negotiation in the moment.' },
-  soft: { label: 'soft limit', accent: '#d9a05a', section: 'soft limits', hint: 'approach with care. a conversation first, every time.' },
-  agreement: { label: 'agreement', accent: null, section: 'our agreements', hint: null },
+  hard: { label: 'hard limit', accent: '#d05a5a', section: 'hard limits', hint: 'absolute no. not up for negotiation in the moment.', placeholder: 'what’s the limit?' },
+  soft: { label: 'soft limit', accent: '#d9a05a', section: 'soft limits', hint: 'approach with care. a conversation first, every time.', placeholder: 'what’s the limit?' },
+  messy: { label: 'messy list', accent: '#8a7bd9', section: 'the messy list', hint: 'people neither of us plays with. on by either of us, off only when we both agree.', placeholder: 'who’s off the table?' },
+  agreement: { label: 'agreement', accent: null, section: 'our agreements', hint: null, placeholder: 'what have we agreed?' },
 }
-const KIND_ORDER = ['hard', 'soft', 'agreement']
+const KIND_ORDER = ['hard', 'soft', 'messy', 'agreement']
 
 function dateStr(iso) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -23,7 +25,7 @@ function dateStr(iso) {
 
 function KindPicker({ value, onChange }) {
   return (
-    <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
       {KIND_ORDER.map((k) => {
         const on = value === k
         const accent = KINDS[k].accent || 'var(--tide-accent-ink)'
@@ -121,7 +123,7 @@ function AddAgreement({ onAdd }) {
   return (
     <form onSubmit={submit} className="tide-card" style={{ padding: 16 }}>
       <Label>new entry</Label>
-      <textarea className="tide-input" style={{ marginTop: 4, minHeight: 70, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5 }} placeholder="what have we agreed?" value={text} onChange={(e) => setText(e.target.value)} autoFocus />
+      <textarea className="tide-input" style={{ marginTop: 4, minHeight: 70, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5 }} placeholder={KINDS[kind].placeholder} value={text} onChange={(e) => setText(e.target.value)} autoFocus />
       <input className="tide-input" style={{ marginTop: 8 }} placeholder="context / example (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
       <KindPicker value={kind} onChange={setKind} />
       <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
@@ -168,7 +170,7 @@ export default function TideEnm() {
                   <p className="tide-sub" style={{ marginTop: -4, marginBottom: 8, fontSize: 12.5 }}>{KINDS[k].hint}</p>
                 )}
                 {items.length === 0 ? (
-                  <EmptyHint>{k === 'agreement' ? 'nothing written down yet. add the first one.' : 'none written down yet.'}</EmptyHint>
+                  <EmptyHint>{k === 'agreement' ? 'nothing written down yet. add the first one.' : k === 'messy' ? 'nobody on it. long may that last.' : 'none written down yet.'}</EmptyHint>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
                     {items.map((a) => (

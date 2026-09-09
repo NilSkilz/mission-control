@@ -860,9 +860,10 @@ router.delete('/journal/:id', (req, res) => {
 // Either parent can add, reword or remove; addedBy/updatedAt keep provenance.
 // Kids never see it: nav is parent-gated, the route is role-gated, API 403s.
 
-// Every entry has a kind: a plain agreement, a soft limit (talk first) or a
-// hard limit (absolute no).
-const ENM_KINDS = ['agreement', 'soft', 'hard'];
+// Every entry has a kind: a plain agreement, a soft limit (talk first), a
+// hard limit (absolute no) or a messy-list entry (a person neither parent
+// plays with; text = the name, note = optional context).
+const ENM_KINDS = ['agreement', 'soft', 'hard', 'messy'];
 
 // GET /enm -> every agreement, oldest first, with the adder's display name.
 router.get('/enm', (req, res) => {
