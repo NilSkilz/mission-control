@@ -658,3 +658,17 @@ export async function updateJournalEntry(id, patch) {
 export async function deleteJournalEntry(id) {
   await request(`/journal/${id}`, { method: 'DELETE' })
 }
+
+// ==================== AGREEMENTS ("us" page — parents only, shared) ====================
+export async function getEnmAgreements() {
+  return request('/enm')
+}
+export async function addEnmAgreement(agreement) {
+  return request('/enm', { method: 'POST', body: agreement })
+}
+export async function updateEnmAgreement(id, patch) {
+  return request(`/enm/${id}`, { method: 'PATCH', body: patch })
+}
+export async function deleteEnmAgreement(id) {
+  await request(`/enm/${id}`, { method: 'DELETE' })
+}

@@ -17,6 +17,7 @@ const ICONS = {
   lift: 'M4 13l1.8-5.2A2 2 0 0 1 7.7 6.5h8.6a2 2 0 0 1 1.9 1.3L20 13m0 0v4h-2v-1H6v1H4v-4m16 0H4m4 3.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m11 0a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0',
   health: 'M3 12h4l2-6 4 12 2-6h6',
   journal: 'M4 4h11l5 5v11H4zM15 4v5h5M8 13h8M8 17h8M8 9h3',
+  us: 'M12 21C7 16.5 3.5 13.2 3.5 9.4A4.4 4.4 0 0 1 12 7.6a4.4 4.4 0 0 1 8.5 1.8c0 3.8-3.5 7.1-8.5 11.6z',
 }
 
 function NavIcon({ name }) {
@@ -50,6 +51,7 @@ const OVERFLOW_NAV = NAV.filter((i) => !PRIMARY_KEYS.includes(i.key))
 const PARENT_NAV = [
   { key: 'health', label: 'health', to: '/health', icon: 'health' },
   { key: 'journal', label: 'journal', to: '/journal', icon: 'journal' },
+  { key: 'us', label: 'us', to: '/us', icon: 'us' },
   { key: 'people', label: 'people', to: '/people', icon: 'people' },
 ]
 
@@ -150,6 +152,9 @@ export default function TideShell({ children }) {
             )}
             {isParent && (
               <Link to="/journal" className={active === 'journal' ? 'on' : ''}>journal</Link>
+            )}
+            {isParent && (
+              <Link to="/us" className={active === 'us' ? 'on' : ''}>us</Link>
             )}
             {isParent && (
               <Link to="/people" className={active === 'people' ? 'on' : ''}>people</Link>

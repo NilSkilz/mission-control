@@ -854,4 +854,54 @@ router.delete('/journal/:id', (req, res) => {
   res.status(204).end();
 });
 
+// ==================== AGREEMENTS ("us" page — PARENTS ONLY, SHARED) ====================
+// The inverse of the journal: one list both parents read and write, so an
+// agreement lives in writing instead of in one person's memory of a chat.
+// Either parent can add, reword or remove; addedBy/updatedAt keep provenance.
+// Kids never see it: nav is parent-gated, the route is role-gated, API 403s.
+
+// GET /enm -> every agreement, oldest first, with the adder's display name.
+router.get('/enm', (req, res) => {
+  if (!requireParent(req, res)) return;
+  const rows = db.prepare(
+    `SELECT a.id, a.text, a.note, a.addedBy, a.createdAt, a.updatedAt, u.displayName AS addedByName
+       FROM enmAgreements a LEFT JOIN users u ON u.id = a.addedBy
+      ORDER BY a.createdAt ASC`
+  ).all();
+  res.json({ agreements: rows });
+});
+
+// POST /enm  { text, note? }
+router.post('/enm', (req, res) => {
+  const me = requireParent(req, res); if (!me) return;
+  const text = String(req.body.text || '').slice(0, 1000).trim();
+  if (!text) return res.status(400).json({ error: 'an agreement needs some words' });
+  const note = req.body.note != null ? String(req.body.note).slice(0, 2000).trim() : null;
+  const row = create('enmAgreements', { text, note: note || null, addedBy: me.id });
+  res.status(201).json(row);
+});
+
+// PATCH /enm/:id  { text?, note? } — shared list, so either parent can edit.
+router.patch('/enm/:id', (req, res) => {
+  const me = requireParent(req, res); if (!me) return;
+  const row = get('enmAgreements', req.params.id);
+  if (!row) return res.status(404).json({ error: 'not found' });
+  const patch = {};
+  if ('text' in req.body) {
+    const text = String(req.body.text || '').slice(0, 1000).trim();
+    if (!text) return res.status(400).json({ error: 'an agreement needs some words' });
+    patch.text = text;
+  }
+  if ('note' in req.body) patch.note = req.body.note ? String(req.body.note).slice(0, 2000).trim() || null : null;
+  res.json(update('enmAgreements', req.params.id, patch));
+});
+
+// DELETE /enm/:id — either parent; removing an agreement is itself a conversation
+// they'll have had, the app just reflects it.
+router.delete('/enm/:id', (req, res) => {
+  if (!requireParent(req, res)) return;
+  if (!remove('enmAgreements', req.params.id)) return res.status(404).json({ error: 'not found' });
+  res.status(204).end();
+});
+
 export default router;

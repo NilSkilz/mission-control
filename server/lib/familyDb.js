@@ -350,6 +350,42 @@ if (!db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'calori
   }
 }
 
+// Shared parents-only agreements ("us" page). Unlike the journal this is the
+// opposite privacy model: both parents read and write the SAME list, so an
+// agreement is never one person's memory of a conversation. Kids are role-gated
+// out entirely (nav hidden, routes 403).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS enmAgreements (
+    id TEXT PRIMARY KEY,
+    text TEXT NOT NULL,
+    note TEXT,
+    addedBy TEXT REFERENCES users(id),
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL
+  );
+`);
+
+// Seed the initial agreed rules once (agreed Rob + Aimee, 8-9 Sep 2026).
+if (db.prepare('SELECT COUNT(*) AS n FROM enmAgreements').get().n === 0) {
+  const rob = db.prepare("SELECT id FROM users WHERE username = 'rob'").get();
+  const seedRules = [
+    { text: 'Sexting is fine, as long as we’re not together at the time.' },
+    { text: 'Safe sex, always.' },
+    { text: 'No sleeping in the same bed overnight with someone else.' },
+    { text: 'Nothing happens at home.' },
+    { text: 'Kids and family come first, every time.' },
+  ];
+  const now = Date.now();
+  const insert = db.prepare(
+    'INSERT INTO enmAgreements (id, text, note, addedBy, createdAt, updatedAt) VALUES (?, ?, NULL, ?, ?, ?)'
+  );
+  seedRules.forEach((r, i) => {
+    // Stagger createdAt so "ORDER BY createdAt" keeps the agreed order stable.
+    const ts = new Date(now + i * 1000).toISOString();
+    insert.run(randomUUID(), r.text, rob?.id || null, ts, ts);
+  });
+}
+
 const BOOL_COLUMNS = {
   choreTemplates: ['paid'],
   chores: ['paid'],
