@@ -238,7 +238,7 @@ export default function TideEnm() {
                       const together = items.filter((a) => a.who === 'both')
                       return (
                         <div style={{ marginTop: 14 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: KINDS.interested.accent, marginBottom: 8 }}>both of us · couples we might play with together</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: KINDS.interested.accent, marginBottom: 8 }}>both of us · people we might play with together</div>
                           {together.length === 0 ? (
                             <EmptyHint>no one yet.</EmptyHint>
                           ) : (
