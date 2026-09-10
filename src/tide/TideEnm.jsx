@@ -12,7 +12,9 @@ import { useUser } from '../context/UserContext'
 // moment), soft limits (approach with care, talk first), the messy list
 // (people neither of us plays with; text = the name), the interested list
 // (people one of us has mentioned potential interest in; text = the name,
-// `who` = whose interest, rendered one column per parent) and plain agreements.
+// `who` = whose interest, rendered one column per parent, or 'both' for a
+// couple we might play with together, rendered as its own full-width lane)
+// and plain agreements.
 
 const KINDS = {
   hard: { label: 'hard limit', accent: '#d05a5a', section: 'hard limits', hint: 'absolute no. not up for negotiation in the moment.', placeholder: 'what’s the limit?' },
@@ -63,18 +65,18 @@ function WhoPicker({ value, onChange }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
       <span className="tide-sub" style={{ fontSize: 12.5 }}>whose interest?</span>
-      {parents.map((p) => {
-        const on = value === p.username
+      {[...parents.map((p) => ({ value: p.username, label: p.displayName })), { value: 'both', label: 'both of us' }].map((opt) => {
+        const on = value === opt.value
         return (
           <button
-            key={p.username} type="button" onClick={() => onChange(p.username)}
+            key={opt.value} type="button" onClick={() => onChange(opt.value)}
             style={{
               padding: '6px 12px', fontSize: 12.5, borderRadius: 999, cursor: 'pointer',
               border: `1px solid ${on ? accent : 'var(--tide-card-border)'}`,
               background: 'none', color: on ? accent : 'var(--tide-faint)', fontWeight: on ? 600 : 400,
             }}
           >
-            {p.displayName}
+            {opt.label}
           </button>
         )
       })}
@@ -212,25 +214,44 @@ export default function TideEnm() {
                   <p className="tide-sub" style={{ marginTop: -4, marginBottom: 8, fontSize: 12.5 }}>{KINDS[k].hint}</p>
                 )}
                 {k === 'interested' ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 8, alignItems: 'start' }}>
-                    {state.parents.map((p) => {
-                      const theirs = items.filter((a) => a.who === p.username)
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 8, alignItems: 'start' }}>
+                      {state.parents.map((p) => {
+                        const theirs = items.filter((a) => a.who === p.username)
+                        return (
+                          <div key={p.username} style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: KINDS.interested.accent, marginBottom: 8 }}>{p.displayName}</div>
+                            {theirs.length === 0 ? (
+                              <EmptyHint>no one yet.</EmptyHint>
+                            ) : (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                {theirs.map((a) => (
+                                  <AgreementCard key={a.id} agreement={a} onSave={(patch) => save(a.id, patch)} onDelete={() => removeOne(a.id)} />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {(() => {
+                      const together = items.filter((a) => a.who === 'both')
                       return (
-                        <div key={p.username} style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: KINDS.interested.accent, marginBottom: 8 }}>{p.displayName}</div>
-                          {theirs.length === 0 ? (
+                        <div style={{ marginTop: 14 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: KINDS.interested.accent, marginBottom: 8 }}>both of us · couples we might play with together</div>
+                          {together.length === 0 ? (
                             <EmptyHint>no one yet.</EmptyHint>
                           ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                              {theirs.map((a) => (
+                              {together.map((a) => (
                                 <AgreementCard key={a.id} agreement={a} onSave={(patch) => save(a.id, patch)} onDelete={() => removeOne(a.id)} />
                               ))}
                             </div>
                           )}
                         </div>
                       )
-                    })}
-                  </div>
+                    })()}
+                  </>
                 ) : items.length === 0 ? (
                   <EmptyHint>{k === 'agreement' ? 'nothing written down yet. add the first one.' : k === 'messy' ? 'nobody on it. long may that last.' : 'none written down yet.'}</EmptyHint>
                 ) : (

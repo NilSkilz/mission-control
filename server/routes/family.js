@@ -865,13 +865,21 @@ router.delete('/journal/:id', (req, res) => {
 // plays with; text = the name, note = optional context) or an interested-list
 // entry (a person one parent has mentioned potential interest in; text = the
 // name). Interested entries also carry `who` — the parent whose interest it
-// is (username), which drives the two-column layout on the page.
+// is (username), which drives the two-column layout on the page, or 'both'
+// for a couple the parents might want to play with together (its own lane).
 const ENM_KINDS = ['agreement', 'soft', 'hard', 'messy', 'interested'];
 
 // Resolve a `who` value to a real parent's username, or null if it isn't one.
 function parentUsername(who) {
   const row = db.prepare("SELECT username FROM users WHERE lower(username) = lower(?) AND role = 'parent'").get(String(who || ''));
   return row ? row.username : null;
+}
+
+// `who` on an interested entry: a parent's username, or 'both' for a joint
+// (as-a-couple) interest. Null if it's neither.
+function interestWho(who) {
+  if (String(who || '').toLowerCase() === 'both') return 'both';
+  return parentUsername(who);
 }
 
 // GET /enm -> every agreement, oldest first, with the adder's display name,
@@ -897,8 +905,8 @@ router.post('/enm', (req, res) => {
   if (!ENM_KINDS.includes(kind)) return res.status(400).json({ error: `kind must be one of: ${ENM_KINDS.join(', ')}` });
   let who = null;
   if (kind === 'interested') {
-    who = parentUsername(req.body.who != null ? req.body.who : me.username);
-    if (!who) return res.status(400).json({ error: 'who must be one of the parents' });
+    who = interestWho(req.body.who != null ? req.body.who : me.username);
+    if (!who) return res.status(400).json({ error: "who must be one of the parents, or 'both'" });
   }
   const row = create('enmAgreements', { text, note: note || null, kind, who, addedBy: me.id });
   res.status(201).json(row);
@@ -925,8 +933,8 @@ router.patch('/enm/:id', (req, res) => {
   // interested entries, cleared for everything else.
   const nextKind = patch.kind || row.kind || 'agreement';
   if (nextKind === 'interested') {
-    const who = parentUsername('who' in req.body ? req.body.who : (row.who || me.username));
-    if (!who) return res.status(400).json({ error: 'who must be one of the parents' });
+    const who = interestWho('who' in req.body ? req.body.who : (row.who || me.username));
+    if (!who) return res.status(400).json({ error: "who must be one of the parents, or 'both'" });
     patch.who = who;
   } else if (row.who != null || 'who' in req.body) {
     patch.who = null;
