@@ -371,6 +371,12 @@ if (!db.prepare('PRAGMA table_info(enmAgreements)').all().some((c) => c.name ===
   db.exec("ALTER TABLE enmAgreements ADD COLUMN kind TEXT NOT NULL DEFAULT 'agreement'");
 }
 
+// Interested-list entries carry whose interest it is (a parent's username);
+// the page renders them as one column per parent. Null for every other kind.
+if (!db.prepare('PRAGMA table_info(enmAgreements)').all().some((c) => c.name === 'who')) {
+  db.exec('ALTER TABLE enmAgreements ADD COLUMN who TEXT');
+}
+
 // Seed the initial agreed rules once (agreed Rob + Aimee, 8-9 Sep 2026).
 if (db.prepare('SELECT COUNT(*) AS n FROM enmAgreements').get().n === 0) {
   const rob = db.prepare("SELECT id FROM users WHERE username = 'rob'").get();

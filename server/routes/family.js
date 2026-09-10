@@ -861,22 +861,33 @@ router.delete('/journal/:id', (req, res) => {
 // Kids never see it: nav is parent-gated, the route is role-gated, API 403s.
 
 // Every entry has a kind: a plain agreement, a soft limit (talk first), a
-// hard limit (absolute no) or a messy-list entry (a person neither parent
-// plays with; text = the name, note = optional context).
-const ENM_KINDS = ['agreement', 'soft', 'hard', 'messy'];
+// hard limit (absolute no), a messy-list entry (a person neither parent
+// plays with; text = the name, note = optional context) or an interested-list
+// entry (a person one parent has mentioned potential interest in; text = the
+// name). Interested entries also carry `who` — the parent whose interest it
+// is (username), which drives the two-column layout on the page.
+const ENM_KINDS = ['agreement', 'soft', 'hard', 'messy', 'interested'];
 
-// GET /enm -> every agreement, oldest first, with the adder's display name.
+// Resolve a `who` value to a real parent's username, or null if it isn't one.
+function parentUsername(who) {
+  const row = db.prepare("SELECT username FROM users WHERE lower(username) = lower(?) AND role = 'parent'").get(String(who || ''));
+  return row ? row.username : null;
+}
+
+// GET /enm -> every agreement, oldest first, with the adder's display name,
+// plus the parents (for the interested list's two columns).
 router.get('/enm', (req, res) => {
   if (!requireParent(req, res)) return;
   const rows = db.prepare(
-    `SELECT a.id, a.text, a.note, a.kind, a.addedBy, a.createdAt, a.updatedAt, u.displayName AS addedByName
+    `SELECT a.id, a.text, a.note, a.kind, a.who, a.addedBy, a.createdAt, a.updatedAt, u.displayName AS addedByName
        FROM enmAgreements a LEFT JOIN users u ON u.id = a.addedBy
       ORDER BY a.createdAt ASC`
   ).all();
-  res.json({ agreements: rows });
+  const parents = db.prepare("SELECT username, displayName FROM users WHERE role = 'parent' ORDER BY username").all();
+  res.json({ agreements: rows, parents });
 });
 
-// POST /enm  { text, note?, kind? }
+// POST /enm  { text, note?, kind?, who? }
 router.post('/enm', (req, res) => {
   const me = requireParent(req, res); if (!me) return;
   const text = String(req.body.text || '').slice(0, 1000).trim();
@@ -884,11 +895,16 @@ router.post('/enm', (req, res) => {
   const note = req.body.note != null ? String(req.body.note).slice(0, 2000).trim() : null;
   const kind = req.body.kind != null ? String(req.body.kind) : 'agreement';
   if (!ENM_KINDS.includes(kind)) return res.status(400).json({ error: `kind must be one of: ${ENM_KINDS.join(', ')}` });
-  const row = create('enmAgreements', { text, note: note || null, kind, addedBy: me.id });
+  let who = null;
+  if (kind === 'interested') {
+    who = parentUsername(req.body.who != null ? req.body.who : me.username);
+    if (!who) return res.status(400).json({ error: 'who must be one of the parents' });
+  }
+  const row = create('enmAgreements', { text, note: note || null, kind, who, addedBy: me.id });
   res.status(201).json(row);
 });
 
-// PATCH /enm/:id  { text?, note?, kind? } — shared list, so either parent can edit.
+// PATCH /enm/:id  { text?, note?, kind?, who? } — shared list, so either parent can edit.
 router.patch('/enm/:id', (req, res) => {
   const me = requireParent(req, res); if (!me) return;
   const row = get('enmAgreements', req.params.id);
@@ -904,6 +920,16 @@ router.patch('/enm/:id', (req, res) => {
     const kind = String(req.body.kind);
     if (!ENM_KINDS.includes(kind)) return res.status(400).json({ error: `kind must be one of: ${ENM_KINDS.join(', ')}` });
     patch.kind = kind;
+  }
+  // Keep `who` consistent with the (possibly changing) kind: required for
+  // interested entries, cleared for everything else.
+  const nextKind = patch.kind || row.kind || 'agreement';
+  if (nextKind === 'interested') {
+    const who = parentUsername('who' in req.body ? req.body.who : (row.who || me.username));
+    if (!who) return res.status(400).json({ error: 'who must be one of the parents' });
+    patch.who = who;
+  } else if (row.who != null || 'who' in req.body) {
+    patch.who = null;
   }
   res.json(update('enmAgreements', req.params.id, patch));
 });
