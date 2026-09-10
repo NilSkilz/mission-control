@@ -18,7 +18,7 @@ const KINDS = {
   hard: { label: 'hard limit', accent: '#d05a5a', section: 'hard limits', hint: 'absolute no. not up for negotiation in the moment.', placeholder: 'what’s the limit?' },
   soft: { label: 'soft limit', accent: '#d9a05a', section: 'soft limits', hint: 'approach with care. a conversation first, every time.', placeholder: 'what’s the limit?' },
   messy: { label: 'messy list', accent: '#8a7bd9', section: 'the messy list', hint: 'people neither of us plays with. on by either of us, off only when we both agree.', placeholder: 'who’s off the table?' },
-  interested: { label: 'interested', accent: '#5aa88c', section: 'the interested list', hint: 'people we’ve mentioned to each other. a mention, not a plan — talking comes first.', placeholder: 'who’s caught your eye?' },
+  interested: { label: 'interested', accent: '#5aa88c', section: 'the interested list', hint: 'people we’ve mentioned to each other. a mention, not a plan. talking comes first.', placeholder: 'who’s caught your eye?' },
   agreement: { label: 'agreement', accent: null, section: 'our agreements', hint: null, placeholder: 'what have we agreed?' },
 }
 const KIND_ORDER = ['hard', 'soft', 'messy', 'interested', 'agreement']
