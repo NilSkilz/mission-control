@@ -232,7 +232,7 @@ export default function TideFinances() {
 
       {data.cashflow.length > 0 && (
         <section className="tide-card" style={{ padding: 16 }}>
-          <Label>cash flow, last 12 months (gross, internal moves excluded)</Label>
+          <Label>cash flow, last 12 months (moves between our own accounts excluded)</Label>
           <CashflowChart months={data.cashflow.slice(-12)} />
         </section>
       )}

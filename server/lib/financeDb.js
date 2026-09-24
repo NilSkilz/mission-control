@@ -147,4 +147,12 @@ for (const m of SEED_MORTGAGES) {
   if (!hasMortgage.get(m.key)) insMortgage.run({ ...m, id: randomUUID(), now: now() });
 }
 
+// Payments verified against the actual HSBC direct debits in the Starling joint
+// feed (24 Sep 2026): house £837.88/mo since the May 2025 rate change, field
+// £181.54/mo. Guarded so a future manual edit isn't clobbered.
+db.prepare(`UPDATE financeMortgages SET monthlyPaymentMinor = 83788, updatedAt = ?
+  WHERE key = 'house' AND monthlyPaymentMinor IS NULL`).run(now());
+db.prepare(`UPDATE financeMortgages SET monthlyPaymentMinor = 18154, updatedAt = ?
+  WHERE key = 'field' AND monthlyPaymentMinor = 18151`).run(now());
+
 export default db;
