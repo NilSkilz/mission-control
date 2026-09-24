@@ -109,6 +109,80 @@ function PnlGroup({ group, month, avgMonths, tone }) {
   )
 }
 
+// One line of the typical-month statement. Rows (the regular payees behind a
+// fixed group, or the biggest payees behind a variable one) expand on tap.
+function TypicalLine({ line, tone, suffix }) {
+  const [open, setOpen] = useState(false)
+  const hasRows = line.rows && line.rows.length > 0
+  return (
+    <>
+      <div
+        onClick={hasRows ? () => setOpen(!open) : undefined}
+        style={{ display: 'flex', gap: 8, alignItems: 'baseline', padding: '7px 0', borderBottom: '1px solid var(--tide-hair)', fontSize: 14, cursor: hasRows ? 'pointer' : 'default' }}
+      >
+        <span style={{ width: 14, fontSize: 10, color: 'var(--tide-muted)' }}>{hasRows ? (open ? '▾' : '▸') : ''}</span>
+        <span style={{ flex: 1, fontWeight: 600 }}>
+          {line.label}
+          {suffix && <span className="tide-sub" style={{ fontSize: 11, fontWeight: 400, marginLeft: 6 }}>{suffix}</span>}
+        </span>
+        <span style={{ width: 92, textAlign: 'right', fontWeight: 600, color: tone }}>{gbp(line.typicalMinor)}</span>
+      </div>
+      {open && line.rows.map((r) => (
+        <div key={r.label} style={{ display: 'flex', gap: 8, alignItems: 'baseline', padding: '4px 0 4px 22px', borderBottom: '1px solid var(--tide-hair)', fontSize: 13 }}>
+          <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--tide-muted)' }}>{r.label}</span>
+          <span style={{ width: 92, textAlign: 'right' }}>{gbp(r.typicalMinor ?? r.avgMinor)}</span>
+        </div>
+      ))}
+    </>
+  )
+}
+
+// The "standard month" statement: regular income, fixed outgoings, what's left,
+// then the average variable spend and the typical bottom line. No month picker,
+// by design: this is the shape of every month, not a ledger.
+function TypicalMonthSection({ tm }) {
+  const totalRow = (label, value, tone, big) => (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', padding: '8px 0 8px 22px', fontSize: big ? 15 : 14, fontWeight: 700 }}>
+      <span style={{ flex: 1 }}>{label}</span>
+      <span style={{ width: 92, textAlign: 'right', color: tone }}>{gbp(value)}</span>
+    </div>
+  )
+  const basis = `${monthLabel(tm.months[0])}–${monthLabel(tm.months[tm.months.length - 1])}`
+  const s = tm.summary
+  return (
+    <section className="tide-card" style={{ padding: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+        <Label>a typical month</Label>
+        <span className="tide-sub" style={{ fontSize: 11 }}>based on {basis} · regular lines are medians, variable spend is the average</span>
+      </div>
+
+      <div className="tide-lbl" style={{ marginTop: 10 }}>comes in</div>
+      {tm.income.map((l) => <TypicalLine key={l.key} line={l} tone={IN_COLOR} suffix={l.irregular ? 'avg, lumpy' : null} />)}
+      {totalRow('Regular income', s.incomeMinor, IN_COLOR)}
+
+      <div className="tide-lbl" style={{ marginTop: 10 }}>goes out, fixed</div>
+      {tm.fixed.map((l) => <TypicalLine key={l.key} line={l} />)}
+      {totalRow('Fixed costs', s.fixedMinor, OUT_COLOR)}
+      <div style={{ borderTop: '1px solid var(--tide-hair)' }}>
+        {totalRow('Left after the fixed stuff', s.afterFixedMinor, s.afterFixedMinor >= 0 ? IN_COLOR : 'var(--tide-accent-ink)')}
+      </div>
+
+      <div className="tide-lbl" style={{ marginTop: 10 }}>then we typically spend</div>
+      {tm.variable.map((l) => <TypicalLine key={l.key} line={l} />)}
+      {totalRow('Variable spend', s.variableMinor, OUT_COLOR)}
+
+      <div style={{ borderTop: '2px solid var(--tide-hair)', marginTop: 4 }}>
+        {totalRow(
+          s.netMinor >= 0 ? 'Typical month: saved' : 'Typical month: overspent by',
+          Math.abs(s.netMinor),
+          s.netMinor >= 0 ? IN_COLOR : 'var(--tide-accent-ink)',
+          true
+        )}
+      </div>
+    </section>
+  )
+}
+
 function PnlSection({ pnl }) {
   const [month, setMonth] = useState(pnl.months[pnl.months.length - 1])
   const avgMonths = pnl.summary.avgMonths
@@ -256,6 +330,8 @@ function AssetRow({ asset, onSaved }) {
 export default function TideFinances() {
   const [data, setData] = useState(null)
   const [pnl, setPnl] = useState(null)
+  const [typical, setTypical] = useState(null)
+  const [showDetail, setShowDetail] = useState(false)
   const [error, setError] = useState(null)
 
   const load = () => {
@@ -263,6 +339,10 @@ export default function TideFinances() {
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then(setData)
       .catch((e) => setError(e.message))
+    fetch('/api/finance/typical-month')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setTypical)
+      .catch(() => {})
     fetch('/api/finance/pnl?months=12')
       .then((r) => (r.ok ? r.json() : null))
       .then(setPnl)
@@ -299,7 +379,22 @@ export default function TideFinances() {
         {pnl && <StatTile label="min monthly bills" value={gbp(pnl.summary.minMonthlyOutgoingsMinor)} />}
       </div>
 
-      {pnl && pnl.months.length > 0 && <PnlSection pnl={pnl} />}
+      {typical && typical.months.length > 0 && <TypicalMonthSection tm={typical} />}
+
+      {pnl && pnl.months.length > 0 && (
+        showDetail ? (
+          <div>
+            <PnlSection pnl={pnl} />
+            <button className="tide-btn tide-btn-ghost" onClick={() => setShowDetail(false)} style={{ fontSize: 12, marginTop: 6 }}>
+              hide monthly detail
+            </button>
+          </div>
+        ) : (
+          <button className="tide-btn tide-btn-ghost" onClick={() => setShowDetail(true)} style={{ fontSize: 12, alignSelf: 'flex-start' }}>
+            ▸ monthly detail (full P&amp;L, month by month)
+          </button>
+        )
+      )}
 
       <section>
         <Label>accounts</Label>

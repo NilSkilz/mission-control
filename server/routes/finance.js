@@ -247,6 +247,111 @@ router.get('/pnl', (req, res) => {
   });
 });
 
+// ---- GET /api/finance/typical-month ----
+// The "standard month": what reliably comes in, what reliably goes out, and
+// what is normally left. Regular lines are the MEDIAN over the last 6 full
+// months (robust to a missed or doubled salary month); irregular income and
+// the variable categories use the MEAN, because lumpy spend still costs its
+// average. Mortgages come from the mortgage table (contractual payments), not
+// the ledger, because DD timing makes the monthly ledger totals lumpy.
+
+const median = (vals) => {
+  if (!vals.length) return 0;
+  const s = [...vals].sort((a, b) => a - b);
+  const mid = s.length >> 1;
+  return s.length % 2 ? s[mid] : Math.round((s[mid - 1] + s[mid]) / 2);
+};
+const mean = (vals) => (vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0);
+
+router.get('/typical-month', (req, res) => {
+  if (!requireParent(req, res)) return;
+  const thisMonth = localDay().slice(0, 7);
+  const months = [];
+  for (let i = 6; i >= 1; i--) {
+    const d = new Date(thisMonth + '-15T12:00:00Z');
+    d.setUTCMonth(d.getUTCMonth() - i);
+    months.push(d.toISOString().slice(0, 7));
+  }
+
+  const txns = db.prepare(`
+    SELECT substr(t.ts, 1, 7) AS month, t.amountMinor, t.counterparty, t.description, t.category, t.source
+      FROM financeTransactions t
+      JOIN financeAccounts a ON a.id = t.accountId
+     WHERE a.closed = 0 AND a.kind != 'space'
+       AND COALESCE(t.category, '') != 'internal'
+       AND t.ts >= ? AND t.ts < ?
+  `).all(months[0] + '-01', thisMonth + '-01');
+
+  const agg = {}; // groupKey -> { byMonth, rows: label -> byMonth }
+  for (const t of txns) {
+    let key = pnlGroup(t);
+    if (key === 'in_other' && (t.counterparty || '').toLowerCase().includes('child benefit')) key = 'in_childben';
+    const g = (agg[key] ||= { byMonth: {}, rows: {} });
+    const amt = Math.abs(t.amountMinor);
+    g.byMonth[t.month] = (g.byMonth[t.month] || 0) + amt;
+    const label = (t.counterparty || t.description || '(unknown)').trim();
+    const r = (g.rows[label] ||= {});
+    r[t.month] = (r[t.month] || 0) + amt;
+  }
+
+  const totals = (byMonth = {}) => months.map((m) => byMonth[m] || 0);
+  // A payee is "regular" if it shows up in at least 4 of the 6 full months;
+  // its typical amount is the median of the months it actually appeared in.
+  const regularRows = (g) => Object.entries(g?.rows || {})
+    .map(([label, byMonth]) => {
+      const present = Object.values(byMonth);
+      return { label, monthsSeen: present.length, typicalMinor: median(present) };
+    })
+    .filter((r) => r.monthsSeen >= 4)
+    .sort((a, b) => b.typicalMinor - a.typicalMinor)
+    .map(({ label, typicalMinor }) => ({ label, typicalMinor }));
+  const topRows = (g, n = 8) => Object.entries(g?.rows || {})
+    .map(([label, byMonth]) => ({ label, avgMinor: Math.round(Object.values(byMonth).reduce((a, b) => a + b, 0) / months.length) }))
+    .sort((a, b) => b.avgMinor - a.avgMinor)
+    .slice(0, n)
+    .filter((r) => r.avgMinor > 0);
+
+  const income = [
+    { key: 'in_rob', label: 'Rob', typicalMinor: median(totals(agg.in_rob?.byMonth)) },
+    { key: 'in_aimee', label: 'Aimee', typicalMinor: median(totals(agg.in_aimee?.byMonth)) },
+    { key: 'in_childben', label: 'Child benefit', typicalMinor: median(totals(agg.in_childben?.byMonth)) },
+    { key: 'in_other', label: 'Other income', typicalMinor: mean(totals(agg.in_other?.byMonth)), irregular: true },
+  ].filter((l) => l.typicalMinor > 0);
+
+  const mortgagePayments = db.prepare(
+    'SELECT COALESCE(SUM(monthlyPaymentMinor), 0) AS p FROM financeMortgages'
+  ).get().p;
+
+  const fixed = [
+    { key: 'mortgages', label: 'Mortgages', typicalMinor: mortgagePayments, rows: [] },
+    { key: 'bills', label: 'Bills & subscriptions', typicalMinor: median(totals(agg.bills?.byMonth)), rows: regularRows(agg.bills) },
+    { key: 'savings', label: 'Savings & investments', typicalMinor: median(totals(agg.savings?.byMonth)), rows: regularRows(agg.savings) },
+  ].filter((l) => l.typicalMinor > 0);
+
+  const variable = SPEND_GROUPS
+    .filter((d) => !['mortgages', 'bills', 'savings'].includes(d.key))
+    .map((d) => ({ key: d.key, label: d.label, typicalMinor: mean(totals(agg[d.key]?.byMonth)), rows: topRows(agg[d.key]) }))
+    .filter((l) => l.typicalMinor > 0);
+
+  const incomeTotal = income.reduce((s, l) => s + l.typicalMinor, 0);
+  const fixedTotal = fixed.reduce((s, l) => s + l.typicalMinor, 0);
+  const variableTotal = variable.reduce((s, l) => s + l.typicalMinor, 0);
+
+  res.json({
+    months,
+    income,
+    fixed,
+    variable,
+    summary: {
+      incomeMinor: incomeTotal,
+      fixedMinor: fixedTotal,
+      afterFixedMinor: incomeTotal - fixedTotal,
+      variableMinor: variableTotal,
+      netMinor: incomeTotal - fixedTotal - variableTotal,
+    },
+  });
+});
+
 // ---- GET /api/finance/transactions?limit=&offset=&accountId=&q= ----
 router.get('/transactions', (req, res) => {
   if (!requireParent(req, res)) return;
