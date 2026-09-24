@@ -30,7 +30,8 @@ app.get('/api/ws/status', (req, res) => {
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+// 5mb: the finance ingest pushes transaction batches well past the 100kb default
+app.use(express.json({ limit: '5mb' }));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
