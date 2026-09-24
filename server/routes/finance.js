@@ -161,6 +161,7 @@ function pnlGroup(t) {
   if (cp.startsWith('hsbc')) return 'mortgages';
   if (cp === 'ns&i' || cp.startsWith('wealthify')) return 'savings';
   if (BILL_SOURCES.has(t.source) || BILL_CATEGORIES.has(t.category) || cp === 'parentpay') return 'bills';
+  if (cp.includes('petrol')) return 'transport';
   if (t.category === 'groceries') return 'groceries';
   if (t.category === 'eating_out') return 'eating_out';
   if (t.category === 'transport' || t.category === 'fuel') return 'transport';
@@ -290,23 +291,28 @@ router.get('/typical-month', (req, res) => {
     const amt = Math.abs(t.amountMinor);
     g.byMonth[t.month] = (g.byMonth[t.month] || 0) + amt;
     const label = (t.counterparty || t.description || '(unknown)').trim();
-    const r = (g.rows[label] ||= {});
-    r[t.month] = (r[t.month] || 0) + amt;
+    const r = (g.rows[label] ||= { byMonth: {}, amounts: [] });
+    r.byMonth[t.month] = (r.byMonth[t.month] || 0) + amt;
+    r.amounts.push(amt);
   }
 
   const totals = (byMonth = {}) => months.map((m) => byMonth[m] || 0);
-  // A payee is "regular" if it shows up in at least 4 of the 6 full months;
-  // its typical amount is the median of the months it actually appeared in.
+  // A payee is "regular" if it shows up in at least 4 of the 6 full months.
+  // Its typical monthly cost is estimated from the per-payment amount and the
+  // payment count, NOT the calendar-month sums: a DD whose date wobbles across
+  // month ends (paid the 1st vs the 31st) doubles up in one month and vanishes
+  // from the next, which made the month-sum median read ~2x (Halifax showed
+  // £91 for a £45.48 DD).
   const regularRows = (g) => Object.entries(g?.rows || {})
-    .map(([label, byMonth]) => {
-      const present = Object.values(byMonth);
-      return { label, monthsSeen: present.length, typicalMinor: median(present) };
+    .map(([label, r]) => {
+      const perMonth = Math.max(1, Math.round(r.amounts.length / months.length));
+      return { label, monthsSeen: Object.keys(r.byMonth).length, typicalMinor: median(r.amounts) * perMonth };
     })
     .filter((r) => r.monthsSeen >= 4)
     .sort((a, b) => b.typicalMinor - a.typicalMinor)
     .map(({ label, typicalMinor }) => ({ label, typicalMinor }));
   const topRows = (g, n = 8) => Object.entries(g?.rows || {})
-    .map(([label, byMonth]) => ({ label, avgMinor: Math.round(Object.values(byMonth).reduce((a, b) => a + b, 0) / months.length) }))
+    .map(([label, r]) => ({ label, avgMinor: Math.round(Object.values(r.byMonth).reduce((a, b) => a + b, 0) / months.length) }))
     .sort((a, b) => b.avgMinor - a.avgMinor)
     .slice(0, n)
     .filter((r) => r.avgMinor > 0);
