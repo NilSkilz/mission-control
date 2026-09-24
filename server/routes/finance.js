@@ -133,8 +133,10 @@ const NAMES_AIMEE = new Set(['amy stokes', 'a stokes', 'mrs amy stokes']);
 const BILL_SOURCES = new Set(['DIRECT_DEBIT', 'STANDING_ORDER', 'SUBSCRIPTION_CHARGE', 'bacs']);
 const BILL_CATEGORIES = new Set(['bills', 'bills_and_services']);
 
+// Income keys are namespaced so 'other income' can't collide with the
+// 'everything else' spending bucket in the shared aggregation map.
 const INCOME_GROUPS = [
-  { key: 'rob', label: 'Rob' }, { key: 'aimee', label: 'Aimee' }, { key: 'other', label: 'Other income' },
+  { key: 'in_rob', label: 'Rob' }, { key: 'in_aimee', label: 'Aimee' }, { key: 'in_other', label: 'Other income' },
 ];
 const SPEND_GROUPS = [
   { key: 'mortgages', label: 'Mortgages' },
@@ -152,9 +154,9 @@ const SPEND_GROUPS = [
 function pnlGroup(t) {
   const cp = (t.counterparty || '').trim().toLowerCase();
   if (t.amountMinor > 0) {
-    if (cp.startsWith('supergroup') || cp.startsWith('aperture') || NAMES_ROB.has(cp)) return 'rob';
-    if (NAMES_AIMEE.has(cp)) return 'aimee';
-    return 'other';
+    if (cp.startsWith('supergroup') || cp.startsWith('aperture') || NAMES_ROB.has(cp)) return 'in_rob';
+    if (NAMES_AIMEE.has(cp)) return 'in_aimee';
+    return 'in_other';
   }
   if (cp.startsWith('hsbc')) return 'mortgages';
   if (cp === 'ns&i' || cp.startsWith('wealthify')) return 'savings';
@@ -239,7 +241,7 @@ router.get('/pnl', (req, res) => {
     summary: {
       avgMonths: full,
       minMonthlyOutgoingsMinor: avgOver(['mortgages', 'bills']),
-      avgIncomeMinor: avgOver(['rob', 'aimee', 'other']),
+      avgIncomeMinor: avgOver(['in_rob', 'in_aimee', 'in_other']),
       avgSpendMinor: avgOver(SPEND_GROUPS.map((g) => g.key)),
     },
   });
