@@ -80,6 +80,14 @@ async function setupRoutes() {
   }
 
   try {
+    const financeModule = await import('./routes/finance.js');
+    app.use('/api/finance', financeModule.default);
+    console.log('✓ Finance routes loaded');
+  } catch (e) {
+    console.error('✗ Failed to load finance routes:', e.message);
+  }
+
+  try {
     const servicesModule = await import('./routes/services.js');
     app.use('/api/services', servicesModule.default);
     console.log('✓ Services routes loaded');
