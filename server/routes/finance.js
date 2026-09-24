@@ -122,6 +122,129 @@ router.get('/overview', (req, res) => {
   });
 });
 
+// ---- GET /api/finance/pnl?months=12 ----
+// Monthly P&L over the open non-space accounts, internal moves excluded.
+// Income splits by who it came from; spending splits into committed bills
+// (mortgages, direct debits, subscriptions) vs the variable categories, each
+// group broken down by counterparty for the collapsible view.
+
+const NAMES_ROB = new Set(['robert stokes', 'rob stokes', 'r stokes', 'mr robert stokes', 'robert mark stokes']);
+const NAMES_AIMEE = new Set(['amy stokes', 'a stokes', 'mrs amy stokes']);
+const BILL_SOURCES = new Set(['DIRECT_DEBIT', 'STANDING_ORDER', 'SUBSCRIPTION_CHARGE', 'bacs']);
+const BILL_CATEGORIES = new Set(['bills', 'bills_and_services']);
+
+const INCOME_GROUPS = [
+  { key: 'rob', label: 'Rob' }, { key: 'aimee', label: 'Aimee' }, { key: 'other', label: 'Other income' },
+];
+const SPEND_GROUPS = [
+  { key: 'mortgages', label: 'Mortgages' },
+  { key: 'bills', label: 'Bills & subscriptions' },
+  { key: 'savings', label: 'Savings & investments' },
+  { key: 'groceries', label: 'Groceries' },
+  { key: 'eating_out', label: 'Eating out' },
+  { key: 'transport', label: 'Transport & fuel' },
+  { key: 'shopping', label: 'Shopping' },
+  { key: 'entertainment', label: 'Entertainment' },
+  { key: 'holidays', label: 'Holidays' },
+  { key: 'other', label: 'Everything else' },
+];
+
+function pnlGroup(t) {
+  const cp = (t.counterparty || '').trim().toLowerCase();
+  if (t.amountMinor > 0) {
+    if (cp.startsWith('supergroup') || cp.startsWith('aperture') || NAMES_ROB.has(cp)) return 'rob';
+    if (NAMES_AIMEE.has(cp)) return 'aimee';
+    return 'other';
+  }
+  if (cp.startsWith('hsbc')) return 'mortgages';
+  if (cp === 'ns&i' || cp.startsWith('wealthify')) return 'savings';
+  if (BILL_SOURCES.has(t.source) || BILL_CATEGORIES.has(t.category) || cp === 'parentpay') return 'bills';
+  if (t.category === 'groceries') return 'groceries';
+  if (t.category === 'eating_out') return 'eating_out';
+  if (t.category === 'transport' || t.category === 'fuel') return 'transport';
+  if (t.category === 'shopping') return 'shopping';
+  if (t.category === 'entertainment') return 'entertainment';
+  if (t.category === 'holidays') return 'holidays';
+  return 'other';
+}
+
+router.get('/pnl', (req, res) => {
+  if (!requireParent(req, res)) return;
+  const nMonths = Math.min(Math.max(parseInt(req.query.months || '12', 10) || 12, 1), 24);
+  const start = new Date();
+  start.setDate(1);
+  start.setMonth(start.getMonth() - (nMonths - 1));
+  const startKey = start.toISOString().slice(0, 7) + '-01';
+
+  const txns = db.prepare(`
+    SELECT substr(t.ts, 1, 7) AS month, t.amountMinor, t.counterparty, t.description, t.category, t.source
+      FROM financeTransactions t
+      JOIN financeAccounts a ON a.id = t.accountId
+     WHERE a.closed = 0 AND a.kind != 'space'
+       AND COALESCE(t.category, '') != 'internal'
+       AND t.ts >= ?
+  `).all(startKey);
+
+  const months = [];
+  for (let i = 0; i < nMonths; i++) {
+    const d = new Date(start);
+    d.setMonth(d.getMonth() + i);
+    months.push(d.toISOString().slice(0, 7));
+  }
+
+  const groups = {}; // key -> { byMonth, total, rows: label -> {byMonth,total} }
+  for (const t of txns) {
+    const key = pnlGroup(t);
+    const g = (groups[key] ||= { byMonth: {}, total: 0, rows: {} });
+    const amt = Math.abs(t.amountMinor);
+    g.byMonth[t.month] = (g.byMonth[t.month] || 0) + amt;
+    g.total += amt;
+    const label = (t.counterparty || t.description || '(unknown)').trim();
+    const r = (g.rows[label] ||= { byMonth: {}, total: 0 });
+    r.byMonth[t.month] = (r.byMonth[t.month] || 0) + amt;
+    r.total += amt;
+  }
+
+  const shape = (defs) => defs
+    .filter((d) => groups[d.key])
+    .map((d) => {
+      const g = groups[d.key];
+      const rows = Object.entries(g.rows)
+        .sort((a, b) => b[1].total - a[1].total);
+      const top = rows.slice(0, 12).map(([label, r]) => ({ label, totalMinor: r.total, byMonth: r.byMonth }));
+      const rest = rows.slice(12);
+      if (rest.length) {
+        const byMonth = {};
+        let total = 0;
+        for (const [, r] of rest) {
+          total += r.total;
+          for (const [m, v] of Object.entries(r.byMonth)) byMonth[m] = (byMonth[m] || 0) + v;
+        }
+        top.push({ label: `${rest.length} smaller payees`, totalMinor: total, byMonth });
+      }
+      return { key: d.key, label: d.label, totalMinor: g.total, byMonth: g.byMonth, rows: top };
+    });
+
+  // Committed vs total, averaged over the last 6 FULL months (current month excluded).
+  const thisMonth = localDay().slice(0, 7);
+  const full = months.filter((m) => m < thisMonth).slice(-6);
+  const avgOver = (keys) => full.length
+    ? Math.round(full.reduce((s, m) => s + keys.reduce((k, key) => k + (groups[key]?.byMonth[m] || 0), 0), 0) / full.length)
+    : 0;
+
+  res.json({
+    months,
+    income: shape(INCOME_GROUPS),
+    spending: shape(SPEND_GROUPS),
+    summary: {
+      avgMonths: full,
+      minMonthlyOutgoingsMinor: avgOver(['mortgages', 'bills']),
+      avgIncomeMinor: avgOver(['rob', 'aimee', 'other']),
+      avgSpendMinor: avgOver(SPEND_GROUPS.map((g) => g.key)),
+    },
+  });
+});
+
 // ---- GET /api/finance/transactions?limit=&offset=&accountId=&q= ----
 router.get('/transactions', (req, res) => {
   if (!requireParent(req, res)) return;
@@ -158,11 +281,11 @@ router.post('/ingest', (req, res) => {
   `);
   const findAccount = db.prepare('SELECT id FROM financeAccounts WHERE provider = ? AND providerId = ?');
   const upsertTxn = db.prepare(`
-    INSERT INTO financeTransactions (id, accountId, providerTxnId, ts, amountMinor, description, counterparty, category)
-    VALUES (@id, @accountId, @providerTxnId, @ts, @amountMinor, @description, @counterparty, @category)
+    INSERT INTO financeTransactions (id, accountId, providerTxnId, ts, amountMinor, description, counterparty, category, source)
+    VALUES (@id, @accountId, @providerTxnId, @ts, @amountMinor, @description, @counterparty, @category, @source)
     ON CONFLICT (accountId, providerTxnId) DO UPDATE SET
       ts = excluded.ts, amountMinor = excluded.amountMinor, description = excluded.description,
-      counterparty = excluded.counterparty, category = excluded.category
+      counterparty = excluded.counterparty, category = excluded.category, source = excluded.source
   `);
   const upsertBalance = db.prepare(`
     INSERT INTO financeBalances (accountId, date, balanceMinor) VALUES (?, ?, ?)
@@ -185,7 +308,7 @@ router.post('/ingest', (req, res) => {
       upsertTxn.run({
         id: randomUUID(), accountId: acc.id, providerTxnId: t.providerTxnId, ts: t.ts,
         amountMinor: Math.round(t.amountMinor), description: t.description || null,
-        counterparty: t.counterparty || null, category: t.category || null,
+        counterparty: t.counterparty || null, category: t.category || null, source: t.source || null,
       });
       nTxn++;
     }

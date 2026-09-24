@@ -82,6 +82,12 @@ db.exec(`
   );
 `);
 
+// Provider payment scheme (DIRECT_DEBIT, STANDING_ORDER, bacs, ...): the honest
+// signal for "committed bill" in the P&L. Added 24 Sep 2026, backfilled by sync.
+if (!db.prepare('PRAGMA table_info(financeTransactions)').all().some((c) => c.name === 'source')) {
+  db.exec('ALTER TABLE financeTransactions ADD COLUMN source TEXT');
+}
+
 const now = () => new Date().toISOString();
 
 // ---- seeds (idempotent: keyed rows are only inserted when missing) ----

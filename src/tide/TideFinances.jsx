@@ -80,6 +80,82 @@ function CashflowChart({ months }) {
   )
 }
 
+// One collapsible P&L group: header row with the group total, tap to expand
+// the per-payee rows. Columns: selected month, then the 6-full-month average.
+function PnlGroup({ group, month, avgMonths, tone }) {
+  const [open, setOpen] = useState(false)
+  const avgOf = (byMonth) =>
+    avgMonths.length ? Math.round(avgMonths.reduce((s, m) => s + (byMonth[m] || 0), 0) / avgMonths.length) : 0
+  const cell = (v) => (v ? gbp(v) : '—')
+  return (
+    <>
+      <div
+        onClick={() => setOpen(!open)}
+        style={{ display: 'flex', gap: 8, alignItems: 'baseline', padding: '8px 0', borderBottom: '1px solid var(--tide-hair)', cursor: 'pointer', fontSize: 14 }}
+      >
+        <span style={{ width: 14, fontSize: 10, color: 'var(--tide-muted)' }}>{open ? '▾' : '▸'}</span>
+        <span style={{ flex: 1, fontWeight: 600 }}>{group.label}</span>
+        <span style={{ width: 86, textAlign: 'right', fontWeight: 600, color: tone }}>{cell(group.byMonth[month])}</span>
+        <span className="tide-sub" style={{ width: 86, textAlign: 'right', fontSize: 12 }}>{cell(avgOf(group.byMonth))}</span>
+      </div>
+      {open && group.rows.map((r) => (
+        <div key={r.label} style={{ display: 'flex', gap: 8, alignItems: 'baseline', padding: '5px 0 5px 22px', borderBottom: '1px solid var(--tide-hair)', fontSize: 13 }}>
+          <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--tide-muted)' }}>{r.label}</span>
+          <span style={{ width: 86, textAlign: 'right' }}>{cell(r.byMonth[month])}</span>
+          <span className="tide-sub" style={{ width: 86, textAlign: 'right', fontSize: 12 }}>{cell(avgOf(r.byMonth))}</span>
+        </div>
+      ))}
+    </>
+  )
+}
+
+function PnlSection({ pnl }) {
+  const [month, setMonth] = useState(pnl.months[pnl.months.length - 1])
+  const avgMonths = pnl.summary.avgMonths
+  const sumFor = (groups, m) => groups.reduce((s, g) => s + (g.byMonth[m] || 0), 0)
+  const totalIn = sumFor(pnl.income, month)
+  const totalOut = sumFor(pnl.spending, month)
+  const net = totalIn - totalOut
+  const longMonth = (ym) => new Date(ym + '-15').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+
+  const totalRow = (label, value, tone) => (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', padding: '8px 0 8px 22px', fontSize: 14, fontWeight: 700 }}>
+      <span style={{ flex: 1 }}>{label}</span>
+      <span style={{ width: 86, textAlign: 'right', color: tone }}>{gbp(value)}</span>
+      <span style={{ width: 86 }} />
+    </div>
+  )
+
+  return (
+    <section className="tide-card" style={{ padding: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <Label>profit &amp; loss</Label>
+        <span style={{ flex: 1 }} />
+        <select className="tide-input" value={month} onChange={(e) => setMonth(e.target.value)} style={{ fontSize: 13, padding: '4px 8px' }}>
+          {[...pnl.months].reverse().map((m) => <option key={m} value={m}>{longMonth(m)}</option>)}
+        </select>
+      </div>
+      <div style={{ display: 'flex', gap: 8, padding: '8px 0 2px', fontSize: 11, color: 'var(--tide-muted)' }}>
+        <span style={{ flex: 1 }} />
+        <span style={{ width: 86, textAlign: 'right' }}>{monthLabel(month)}</span>
+        <span style={{ width: 86, textAlign: 'right' }}>6-mo avg</span>
+      </div>
+      <div className="tide-lbl" style={{ marginTop: 6 }}>income</div>
+      {pnl.income.map((g) => <PnlGroup key={g.key} group={g} month={month} avgMonths={avgMonths} tone={IN_COLOR} />)}
+      {totalRow('Total in', totalIn, IN_COLOR)}
+      <div className="tide-lbl" style={{ marginTop: 10 }}>spending</div>
+      {pnl.spending.map((g) => <PnlGroup key={g.key} group={g} month={month} avgMonths={avgMonths} />)}
+      {totalRow('Total out', totalOut, OUT_COLOR)}
+      <div style={{ borderTop: '1px solid var(--tide-hair)', marginTop: 4 }}>
+        {totalRow(net >= 0 ? 'Net saved' : 'Net overspend', Math.abs(net), net >= 0 ? IN_COLOR : 'var(--tide-accent-ink)')}
+      </div>
+      <div className="tide-sub" style={{ fontSize: 11, marginTop: 6 }}>
+        committed bills (mortgages + direct debits + subscriptions) average {gbp(pnl.summary.minMonthlyOutgoingsMinor)}/mo over the last 6 full months
+      </div>
+    </section>
+  )
+}
+
 function AccountCard({ acct }) {
   const neg = (acct.balanceMinor || 0) < 0
   return (
@@ -179,6 +255,7 @@ function AssetRow({ asset, onSaved }) {
 
 export default function TideFinances() {
   const [data, setData] = useState(null)
+  const [pnl, setPnl] = useState(null)
   const [error, setError] = useState(null)
 
   const load = () => {
@@ -186,6 +263,10 @@ export default function TideFinances() {
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then(setData)
       .catch((e) => setError(e.message))
+    fetch('/api/finance/pnl?months=12')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setPnl)
+      .catch(() => {})
   }
   useEffect(load, [])
 
@@ -215,7 +296,10 @@ export default function TideFinances() {
         <StatTile label="savings + assets" value={gbp(totals.assetsMinor)} />
         <StatTile label="property equity" value={gbp(propertyEquity)} />
         <StatTile label="mortgage debt" value={gbp(-totals.debtMinor)} tone="var(--tide-accent-ink)" />
+        {pnl && <StatTile label="min monthly bills" value={gbp(pnl.summary.minMonthlyOutgoingsMinor)} />}
       </div>
+
+      {pnl && pnl.months.length > 0 && <PnlSection pnl={pnl} />}
 
       <section>
         <Label>accounts</Label>
