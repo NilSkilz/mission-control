@@ -45,6 +45,10 @@ async function setupRoutes() {
     const authModule = await import('./routes/auth.js');
     const { authGuard } = await import('./lib/auth.js');
     app.use('/api/auth', authModule.default);
+    // Jarvis ops feed does its own auth (shared key for POST, parent token for
+    // GET), so it mounts before the global guard like /api/auth does.
+    const jarvisModule = await import('./routes/jarvis.js');
+    app.use('/api/jarvis', jarvisModule.default);
     app.use('/api', authGuard);
     console.log('✓ Auth routes loaded + API guarded');
   } catch (e) {

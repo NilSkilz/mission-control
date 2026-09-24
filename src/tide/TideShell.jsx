@@ -18,6 +18,7 @@ const ICONS = {
   health: 'M3 12h4l2-6 4 12 2-6h6',
   journal: 'M4 4h11l5 5v11H4zM15 4v5h5M8 13h8M8 17h8M8 9h3',
   us: 'M12 21C7 16.5 3.5 13.2 3.5 9.4A4.4 4.4 0 0 1 12 7.6a4.4 4.4 0 0 1 8.5 1.8c0 3.8-3.5 7.1-8.5 11.6z',
+  ops: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm8.5 4a8.5 8.5 0 0 1-.1 1.2l2 1.5-2 3.5-2.4-.9a8.5 8.5 0 0 1-2 1.2L15.5 21h-7l-.5-2.5a8.5 8.5 0 0 1-2-1.2l-2.4.9-2-3.5 2-1.5A8.5 8.5 0 0 1 3.5 12c0-.4 0-.8.1-1.2l-2-1.5 2-3.5 2.4.9a8.5 8.5 0 0 1 2-1.2L8.5 3h7l.5 2.5a8.5 8.5 0 0 1 2 1.2l2.4-.9 2 3.5-2 1.5c.1.4.1.8.1 1.2z',
 }
 
 function NavIcon({ name }) {
@@ -52,6 +53,7 @@ const PARENT_NAV = [
   { key: 'health', label: 'health', to: '/health', icon: 'health' },
   { key: 'journal', label: 'journal', to: '/journal', icon: 'journal' },
   { key: 'us', label: 'us', to: '/us', icon: 'us' },
+  { key: 'ops', label: 'ops', to: '/ops', icon: 'ops' },
   { key: 'people', label: 'people', to: '/people', icon: 'people' },
 ]
 
@@ -155,6 +157,9 @@ export default function TideShell({ children }) {
             )}
             {isParent && (
               <Link to="/us" className={active === 'us' ? 'on' : ''}>us</Link>
+            )}
+            {isParent && (
+              <Link to="/ops" className={active === 'ops' ? 'on' : ''}>ops</Link>
             )}
             {isParent && (
               <Link to="/people" className={active === 'people' ? 'on' : ''}>people</Link>

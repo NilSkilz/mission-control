@@ -432,6 +432,16 @@ export async function askJarvis(userId, message) {
   return request('/jarvis', { method: 'POST', body: { userId, message } })
 }
 
+// Latest Jarvis ops snapshot (cron jobs, Claude usage, vitals) for the /ops
+// page. { receivedAt, status } or null when no snapshot has been pushed yet.
+export async function getJarvisOps() {
+  const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/jarvis/status`, { headers: authHeaders() })
+  if (res.status === 401) { handleUnauthorized(); throw new Error('not authenticated') }
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
 // ==================== HOME ASSISTANT (house screen) ====================
 
 const HA_BASE = `${import.meta.env.VITE_API_URL || ''}/api/ha`
