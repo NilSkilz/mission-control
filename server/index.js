@@ -37,6 +37,14 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', service: 'mission-control-api' });
 });
 
+// Monzo OAuth bounce: Monzo's WAF rejects redirect URIs on private LAN IPs,
+// so the OAuth client points here and this hop forwards to the token catcher
+// on the Jarvis box (only resolvable from home wifi).
+app.get('/monzo/callback', (req, res) => {
+  const qs = req.originalUrl.split('?')[1] || '';
+  res.redirect(302, `http://192.168.1.11:8321/callback${qs ? '?' + qs : ''}`);
+});
+
 // Import and register routes with error handling
 async function setupRoutes() {
   // Auth first: /api/auth is public (login), then everything else under /api
