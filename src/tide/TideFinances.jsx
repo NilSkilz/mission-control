@@ -344,6 +344,144 @@ function AssetRow({ asset, onSaved }) {
   )
 }
 
+// ---- pension forecast ----
+// Everything is in TODAY'S money: growth rates are real (after inflation), and
+// contributions are assumed to track wages, so the target line (also in today's
+// money) is directly comparable. Central 3% real is the usual planner default
+// for a mixed fund; the band is the cautious/optimistic spread.
+const ROB_PENSION = {
+  key: 'pension-rob',
+  dobISO: '1983-12-14',
+  contribMinor: 54075, // Standard Life salary sacrifice: Rob £300.42 + Superdry £240.33
+}
+const GROWTH = { cautious: 1, central: 3, optimistic: 5 } // % real
+// Target: PLSA "moderate" single lifestyle minus the full state pension,
+// funded by 4% drawdown (i.e. gap x 25).
+const TARGET_INCOME_MINOR = 3150000
+const STATE_PENSION_MINOR = 1253500
+const TARGET_MINOR = Math.round((TARGET_INCOME_MINOR - STATE_PENSION_MINOR) * 25)
+
+function projectMinor(startMinor, contribMinor, annualPct, months) {
+  const r = Math.pow(1 + annualPct / 100, 1 / 12) - 1
+  const g = Math.pow(1 + r, months)
+  return Math.round(startMinor * g + contribMinor * ((g - 1) / r))
+}
+
+const kFmt = (minor) => `£${Math.round(minor / 100000)}k`
+
+function PensionForecast({ assets }) {
+  const [retireAge, setRetireAge] = useState(65)
+  const asset = assets.find((a) => a.key === ROB_PENSION.key)
+
+  const model = useMemo(() => {
+    if (!asset || asset.valueMinor == null) return null
+    const dob = new Date(ROB_PENSION.dobISO)
+    const now = new Date()
+    // He retires in his birthday month (December) of the year he turns retireAge.
+    const monthsTo = (year, monthIdx) =>
+      (year - now.getFullYear()) * 12 + (monthIdx - now.getMonth())
+    const N = monthsTo(dob.getFullYear() + retireAge, dob.getMonth())
+    const sample = []
+    for (let m = 0; m <= N; m += 12) sample.push(m)
+    if (sample[sample.length - 1] !== N) sample.push(N)
+    const series = {}
+    for (const [name, pct] of Object.entries(GROWTH)) {
+      series[name] = sample.map((m) => ({
+        m,
+        v: projectMinor(asset.valueMinor, ROB_PENSION.contribMinor, pct, m),
+      }))
+    }
+    const end = (name) => series[name][series[name].length - 1].v
+    // Extra monthly contribution (at central growth) that would close the gap.
+    const r = Math.pow(1 + GROWTH.central / 100, 1 / 12) - 1
+    const annuity = (Math.pow(1 + r, N) - 1) / r
+    const shortfall = TARGET_MINOR - end('central')
+    const extraMonthly = shortfall > 0 ? Math.round(shortfall / annuity) : 0
+    // Age ticks every 5 years, plus the retirement age itself.
+    const ticks = []
+    for (let age = 45; age <= retireAge; age += 5) {
+      const m = monthsTo(dob.getFullYear() + age, dob.getMonth())
+      if (m > 6 && m <= N - 6) ticks.push({ m, age })
+    }
+    ticks.push({ m: N, age: retireAge })
+    const ageAt = (m) => Math.floor((monthsTo(now.getFullYear(), now.getMonth()) - monthsTo(dob.getFullYear(), dob.getMonth()) + m) / 12)
+    return { N, series, ends: { cautious: end('cautious'), central: end('central'), optimistic: end('optimistic') }, extraMonthly, ticks, ageAt, now }
+  }, [asset, retireAge])
+
+  if (!model) return null
+  const { N, series, ends, extraMonthly, ticks } = model
+
+  const W = 680, H = 230, PAD_L = 44, PAD_R = 58, PAD_T = 16, PAD_B = 22
+  const maxV = Math.max(TARGET_MINOR, ends.optimistic) * 1.06
+  const xs = (m) => PAD_L + (m / N) * (W - PAD_L - PAD_R)
+  const ys = (v) => H - PAD_B - (v / maxV) * (H - PAD_B - PAD_T)
+  const linePath = (pts) => pts.map((p, i) => `${i ? 'L' : 'M'}${xs(p.m).toFixed(1)},${ys(p.v).toFixed(1)}`).join(' ')
+  const bandPath = `${linePath(series.optimistic)} ${[...series.cautious].reverse()
+    .map((p) => `L${xs(p.m).toFixed(1)},${ys(p.v).toFixed(1)}`).join(' ')} Z`
+  // Recessive gridlines at round £100k steps.
+  const gridStep = 10000000
+  const grid = []
+  for (let v = gridStep; v < maxV; v += gridStep) grid.push(v)
+  const yr = (m) => new Date(model.now.getFullYear(), model.now.getMonth() + m).getFullYear()
+  const onTrack = ends.central >= TARGET_MINOR
+
+  return (
+    <section className="tide-card" style={{ padding: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <Label>pension forecast (Rob)</Label>
+        <span style={{ flex: 1 }} />
+        <select className="tide-input" value={retireAge} onChange={(e) => setRetireAge(Number(e.target.value))} style={{ fontSize: 13, padding: '4px 8px' }}>
+          {[60, 65, 68].map((a) => <option key={a} value={a}>retire at {a}</option>)}
+        </select>
+      </div>
+      <div style={{ margin: '8px 0 2px', fontSize: 22, fontWeight: 700 }}>
+        ≈ {gbp(ends.central)} <span className="tide-sub" style={{ fontSize: 13, fontWeight: 400 }}>at {retireAge}, in today's money · likely range {kFmt(ends.cautious)}–{kFmt(ends.optimistic)}</span>
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6, color: onTrack ? IN_COLOR : 'var(--tide-accent-ink)' }}>
+        {onTrack
+          ? `on track for the "moderate" target of ${kFmt(TARGET_MINOR)}`
+          : `"moderate" target is ${kFmt(TARGET_MINOR)}: roughly +£${Math.round(extraMonthly / 100).toLocaleString('en-GB')}/mo more would close the gap`}
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+        {grid.map((v) => (
+          <g key={v}>
+            <line x1={PAD_L} y1={ys(v)} x2={W - PAD_R} y2={ys(v)} stroke="var(--tide-hair)" strokeWidth="1" />
+            <text x={PAD_L - 6} y={ys(v) + 3} textAnchor="end" fontSize="10" fill="var(--tide-muted)">{kFmt(v)}</text>
+          </g>
+        ))}
+        <path d={bandPath} fill={IN_COLOR} opacity="0.14" />
+        <path d={linePath(series.central)} fill="none" stroke={IN_COLOR} strokeWidth="2" />
+        <line x1={PAD_L} y1={ys(TARGET_MINOR)} x2={W - PAD_R} y2={ys(TARGET_MINOR)} stroke="var(--tide-muted)" strokeWidth="1" strokeDasharray="5 4" />
+        <text x={W - PAD_R} y={ys(TARGET_MINOR) - 5} textAnchor="end" fontSize="11" fill="var(--tide-muted)">
+          moderate retirement ≈ {kFmt(TARGET_MINOR)}
+        </text>
+        <circle cx={xs(0)} cy={ys(series.central[0].v)} r="4" fill={IN_COLOR} stroke="var(--tide-card-bg, var(--tide-bg))" strokeWidth="2" />
+        <text x={W - PAD_R + 5} y={ys(ends.central) + 4} fontSize="12" fontWeight="700" fill="var(--tide-ink)">{kFmt(ends.central)}</text>
+        <text x={W - PAD_R + 5} y={ys(ends.optimistic) + 4} fontSize="10" fill="var(--tide-muted)">{kFmt(ends.optimistic)}</text>
+        <text x={W - PAD_R + 5} y={ys(ends.cautious) + 4} fontSize="10" fill="var(--tide-muted)">{kFmt(ends.cautious)}</text>
+        {ticks.map((t) => (
+          <text key={t.age} x={xs(t.m)} y={H - 6} textAnchor="middle" fontSize="10" fill="var(--tide-muted)">{t.age}</text>
+        ))}
+        {series.central.map((p, i) => {
+          const halfSlot = (W - PAD_L - PAD_R) / N * 6
+          return (
+            <rect
+              key={p.m} x={xs(p.m) - halfSlot} y={PAD_T} width={halfSlot * 2}
+              height={H - PAD_T - PAD_B} fill="transparent"
+            >
+              <title>{`age ${model.ageAt(p.m)} (${yr(p.m)}): ${gbp(p.v)} · range ${kFmt(series.cautious[i].v)}–${kFmt(series.optimistic[i].v)}`}</title>
+            </rect>
+          )
+        })}
+      </svg>
+      <div className="tide-sub" style={{ fontSize: 11, marginTop: 8 }}>
+        assumes {gbp(ROB_PENSION.contribMinor, { pence: true })}/mo keeps going in (you + Superdry, tracking wages) and {GROWTH.central}% real growth after inflation (band {GROWTH.cautious}–{GROWTH.optimistic}%).
+        target = PLSA "moderate" single lifestyle ({gbp(TARGET_INCOME_MINOR)}/yr) minus the full state pension ({gbp(STATE_PENSION_MINOR)}/yr, from age 68), drawn at 4%. x-axis is age.
+      </div>
+    </section>
+  )
+}
+
 export default function TideFinances() {
   const [data, setData] = useState(null)
   const [pnl, setPnl] = useState(null)
@@ -456,6 +594,8 @@ export default function TideFinances() {
           <EmptyHint>tap a value to true it up; ledger-tracked ones update themselves</EmptyHint>
         </section>
       </div>
+
+      <PensionForecast assets={data.assets} />
 
       {data.recent.length > 0 && (
         <section className="tide-card" style={{ padding: 16 }}>
