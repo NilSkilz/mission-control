@@ -100,7 +100,7 @@ const SEED_ASSETS = [
   { key: 'house', name: 'House', kind: 'property',
     note: 'Bought 2 Feb 2015 for £199,950. Valued from the purchase price (HPI true-ups via sync).' },
   { key: 'field', name: 'The Field', kind: 'property',
-    note: 'A couple of acres of meadow + woodland (woodlands.co.uk), ~Dec 2021, held at cost as an investment for the kids.' },
+    note: 'A couple of acres of meadow + woodland (woodlands.co.uk), ~Dec 2021 for £42,000, an investment for the kids. Valued by scaling cost with the KF English Farmland Index (sync true-ups); amenity plots trade above bare land, so conservative.' },
   { key: 'pension-rob', name: "Rob's pensions", kind: 'pension', note: 'Manual: value needed.' },
   { key: 'pension-aimee', name: "Aimee's pensions", kind: 'pension', note: 'Manual: value needed.' },
 ];

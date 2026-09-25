@@ -26,6 +26,9 @@ function dateLabel(iso) {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
 
+const monthYear = (iso) =>
+  new Date(iso).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+
 function StatTile({ label, value, tone }) {
   return (
     <div className="tide-card" style={{ padding: '14px 16px', flex: '1 1 150px', minWidth: 150 }}>
@@ -295,13 +298,27 @@ function AssetRow({ asset, onSaved }) {
     }
   }
 
+  // Property rows carry their purchase price (the earliest value row), so show
+  // what it has done since we bought it. Indexed estimates, not valuations.
+  const bought = asset.kind === 'property' && asset.purchaseMinor != null
+    && asset.valueMinor != null && asset.purchaseDate !== asset.valueDate
+  const gainMinor = bought ? asset.valueMinor - asset.purchaseMinor : 0
+  const gainPct = bought ? (gainMinor / asset.purchaseMinor) * 100 : 0
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--tide-hair)' }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 14, fontWeight: 600 }}>{asset.name}</div>
-        <div className="tide-sub" style={{ fontSize: 11 }}>
-          {asset.valueDate ? `as of ${dateLabel(asset.valueDate)}` : 'value needed'}
+        <div className="tide-sub" style={{ fontSize: 11 }} title={asset.valueNote || undefined}>
+          {bought
+            ? `bought ${gbp(asset.purchaseMinor)} · ${monthYear(asset.purchaseDate)} · est as of ${monthYear(asset.valueDate)}`
+            : asset.valueDate ? `as of ${dateLabel(asset.valueDate)}` : 'value needed'}
         </div>
+        {bought && (
+          <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2, color: gainMinor >= 0 ? IN_COLOR : 'var(--tide-accent-ink)' }}>
+            {gainMinor >= 0 ? '+' : '-'}{gbp(Math.abs(gainMinor))} ({gainMinor >= 0 ? '+' : ''}{gainPct.toFixed(0)}%) since purchase
+          </div>
+        )}
       </div>
       {editing ? (
         <span style={{ display: 'flex', gap: 6 }}>
@@ -431,6 +448,7 @@ export default function TideFinances() {
         <section className="tide-card" style={{ padding: 16 }}>
           <Label>property</Label>
           {groups.property.map((a) => <AssetRow key={a.key} asset={a} onSaved={load} />)}
+          <EmptyHint>house tracks the Cornwall HPI, the field tracks the English farmland index; tap to override with a real valuation</EmptyHint>
         </section>
         <section className="tide-card" style={{ padding: 16 }}>
           <Label>pensions</Label>

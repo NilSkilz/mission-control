@@ -60,11 +60,16 @@ router.get('/overview', (req, res) => {
      ORDER BY a.sortOrder, a.name
   `).all().map((a) => ({ ...a, closed: !!a.closed }));
 
+  // Latest value plus the earliest one: for property the earliest row is the
+  // purchase price, which lets the page show appreciation since we bought it.
   const assets = db.prepare(`
-    SELECT s.*, v.valueMinor, v.date AS valueDate, v.source AS valueSource
+    SELECT s.*, v.valueMinor, v.date AS valueDate, v.source AS valueSource, v.note AS valueNote,
+           p.valueMinor AS purchaseMinor, p.date AS purchaseDate
       FROM financeAssets s
       LEFT JOIN financeAssetValues v ON v.assetId = s.id
        AND v.date = (SELECT MAX(date) FROM financeAssetValues WHERE assetId = s.id)
+      LEFT JOIN financeAssetValues p ON p.assetId = s.id
+       AND p.date = (SELECT MIN(date) FROM financeAssetValues WHERE assetId = s.id)
      ORDER BY s.kind, s.name
   `).all();
 
