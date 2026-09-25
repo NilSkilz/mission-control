@@ -430,7 +430,7 @@ function PensionForecast({ assets }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <Label>pension forecast (Rob)</Label>
         <span style={{ flex: 1 }} />
-        <select className="tide-input" value={retireAge} onChange={(e) => setRetireAge(Number(e.target.value))} style={{ fontSize: 13, padding: '4px 8px' }}>
+        <select className="tide-input" value={retireAge} onChange={(e) => setRetireAge(Number(e.target.value))} style={{ fontSize: 13, padding: '4px 8px', width: 'auto', flex: '0 0 auto' }}>
           {[60, 65, 68].map((a) => <option key={a} value={a}>retire at {a}</option>)}
         </select>
       </div>
