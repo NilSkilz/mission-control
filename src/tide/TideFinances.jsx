@@ -482,6 +482,157 @@ function PensionForecast({ assets }) {
   )
 }
 
+// ---- wishlist ----
+// Wanted-but-not-committed spending, by category. Estimates are optional and
+// rough; the open total at the top is "what it costs to do everything".
+
+function WishRow({ item, onChange }) {
+  const done = item.status === 'done'
+  const act = (patch) => fetch(`/api/finance/wishlist/${item.id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  }).then(onChange)
+  return (
+    <div style={{ display: 'flex', gap: 10, alignItems: 'baseline', padding: '6px 0 6px 22px', borderBottom: '1px solid var(--tide-hair)', fontSize: 14 }}>
+      <button
+        className="tide-btn tide-btn-ghost"
+        onClick={() => act({ status: done ? 'open' : 'done' })}
+        title={done ? 'reopen' : 'mark done'}
+        style={{ padding: '0 6px', fontSize: 14, color: done ? IN_COLOR : 'var(--tide-muted)' }}
+      >
+        {done ? '✓' : '○'}
+      </button>
+      <span style={{ flex: 1, minWidth: 0, textDecoration: done ? 'line-through' : 'none', color: done ? 'var(--tide-muted)' : 'var(--tide-ink)' }}>
+        {item.title}
+        {item.note && <span className="tide-sub" style={{ fontSize: 11, marginLeft: 8 }}>{item.note}</span>}
+      </span>
+      <span style={{ fontWeight: 600, color: done ? 'var(--tide-muted)' : 'var(--tide-ink)' }}>
+        {item.estimateMinor != null ? gbp(item.estimateMinor) : ''}
+      </span>
+      <button
+        className="tide-btn tide-btn-ghost"
+        onClick={() => act({ status: 'dropped' })}
+        title="remove from the list"
+        style={{ padding: '0 4px', fontSize: 12, color: 'var(--tide-muted)' }}
+      >
+        ×
+      </button>
+    </div>
+  )
+}
+
+function WishAddForm({ categories, defaultCategory, onAdded }) {
+  const [title, setTitle] = useState('')
+  const [cat, setCat] = useState(defaultCategory || categories[0] || '')
+  const [newCat, setNewCat] = useState('')
+  const [est, setEst] = useState('')
+  const [busy, setBusy] = useState(false)
+  const NEW = '__new__'
+
+  const add = async () => {
+    const category = cat === NEW ? newCat.trim() : cat
+    if (!title.trim() || !category) return
+    const pounds = parseFloat(est.replace(/[£,\s]/g, ''))
+    setBusy(true)
+    try {
+      const res = await fetch('/api/finance/wishlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category, title: title.trim(),
+          estimatePounds: Number.isFinite(pounds) ? pounds : undefined,
+        }),
+      })
+      if (res.ok) { setTitle(''); setEst(''); setNewCat(''); onAdded() }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+      <input
+        className="tide-input" value={title} onChange={(e) => setTitle(e.target.value)}
+        placeholder="add something…" style={{ flex: '2 1 160px', fontSize: 13, padding: '5px 8px' }}
+        onKeyDown={(e) => { if (e.key === 'Enter') add() }}
+      />
+      <select className="tide-input" value={cat} onChange={(e) => setCat(e.target.value)} style={{ flex: '1 1 130px', fontSize: 13, padding: '5px 8px' }}>
+        {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+        <option value={NEW}>new category…</option>
+      </select>
+      {cat === NEW && (
+        <input
+          className="tide-input" value={newCat} onChange={(e) => setNewCat(e.target.value)}
+          placeholder="category name" style={{ flex: '1 1 120px', fontSize: 13, padding: '5px 8px' }}
+        />
+      )}
+      <input
+        className="tide-input" value={est} onChange={(e) => setEst(e.target.value)}
+        placeholder="£ est" inputMode="decimal" style={{ flex: '0 1 80px', width: 80, fontSize: 13, padding: '5px 8px' }}
+        onKeyDown={(e) => { if (e.key === 'Enter') add() }}
+      />
+      <button className="tide-btn" onClick={add} disabled={busy || !title.trim()} style={{ fontSize: 13, padding: '5px 12px' }}>add</button>
+    </div>
+  )
+}
+
+function WishCategory({ name, items, onChange }) {
+  const [open, setOpen] = useState(false)
+  const openItems = items.filter((i) => i.status === 'open')
+  const doneItems = items.filter((i) => i.status === 'done')
+  const subtotal = openItems.reduce((s, i) => s + (i.estimateMinor || 0), 0)
+  return (
+    <>
+      <div
+        onClick={() => setOpen(!open)}
+        style={{ display: 'flex', gap: 8, alignItems: 'baseline', padding: '8px 0', borderBottom: '1px solid var(--tide-hair)', cursor: 'pointer', fontSize: 14 }}
+      >
+        <span style={{ width: 14, fontSize: 10, color: 'var(--tide-muted)' }}>{open ? '▾' : '▸'}</span>
+        <span style={{ flex: 1, fontWeight: 600 }}>{name}</span>
+        <span className="tide-sub" style={{ fontSize: 12 }}>
+          {openItems.length} open{doneItems.length ? ` · ${doneItems.length} done` : ''}
+        </span>
+        <span style={{ width: 86, textAlign: 'right', fontWeight: 600 }}>{subtotal ? gbp(subtotal) : '—'}</span>
+      </div>
+      {open && openItems.map((i) => <WishRow key={i.id} item={i} onChange={onChange} />)}
+      {open && doneItems.map((i) => <WishRow key={i.id} item={i} onChange={onChange} />)}
+    </>
+  )
+}
+
+function WishlistSection() {
+  const [items, setItems] = useState(null)
+  const load = () => {
+    fetch('/api/finance/wishlist')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setItems(d.items))
+      .catch(() => {})
+  }
+  useEffect(load, [])
+  if (!items) return null
+
+  const byCat = {}
+  for (const i of items) (byCat[i.category] ||= []).push(i)
+  const categories = Object.keys(byCat).sort()
+  const openTotal = items.filter((i) => i.status === 'open').reduce((s, i) => s + (i.estimateMinor || 0), 0)
+
+  return (
+    <section className="tide-card" style={{ padding: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+        <Label>wishlist</Label>
+        <span className="tide-sub" style={{ fontSize: 11 }}>things we want to do to the house, rough budgets</span>
+        <span style={{ flex: 1 }} />
+        <span style={{ fontSize: 15, fontWeight: 700 }}>{gbp(openTotal)} <span className="tide-sub" style={{ fontSize: 11, fontWeight: 400 }}>to do the lot</span></span>
+      </div>
+      <div style={{ marginTop: 6 }}>
+        {categories.map((c) => <WishCategory key={c} name={c} items={byCat[c]} onChange={load} />)}
+      </div>
+      <WishAddForm categories={categories} onAdded={load} />
+    </section>
+  )
+}
+
 export default function TideFinances() {
   const [data, setData] = useState(null)
   const [pnl, setPnl] = useState(null)
@@ -594,6 +745,8 @@ export default function TideFinances() {
           <EmptyHint>tap a value to true it up; ledger-tracked ones update themselves</EmptyHint>
         </section>
       </div>
+
+      <WishlistSection />
 
       <PensionForecast assets={data.assets} />
 

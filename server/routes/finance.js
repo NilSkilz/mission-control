@@ -441,6 +441,69 @@ router.post('/ingest', (req, res) => {
   res.json({ accounts: nAcc, transactions: nTxn, balances: nBal, skipped });
 });
 
+// ---- wishlist: wanted-but-not-committed spending, grouped by category ----
+
+const WISH_STATUSES = new Set(['open', 'done', 'dropped']);
+
+router.get('/wishlist', (req, res) => {
+  if (!requireParent(req, res)) return;
+  const items = db.prepare(`
+    SELECT * FROM financeWishlist WHERE status != 'dropped'
+     ORDER BY category, status, sortOrder, createdAt
+  `).all();
+  res.json({ items });
+});
+
+router.post('/wishlist', (req, res) => {
+  if (!requireParent(req, res)) return;
+  const { category, title, estimatePounds, note } = req.body || {};
+  if (!category?.trim() || !title?.trim()) return res.status(400).json({ error: 'category and title required' });
+  const est = typeof estimatePounds === 'number' && Number.isFinite(estimatePounds)
+    ? Math.round(estimatePounds * 100) : null;
+  const me = actingUser(req);
+  const ts = new Date().toISOString();
+  const id = randomUUID();
+  const maxSort = db.prepare('SELECT COALESCE(MAX(sortOrder), 0) AS s FROM financeWishlist WHERE category = ?')
+    .get(category.trim().toLowerCase()).s;
+  db.prepare(`
+    INSERT INTO financeWishlist (id, category, title, estimateMinor, note, status, sortOrder, createdBy, createdAt, updatedAt)
+    VALUES (?, ?, ?, ?, ?, 'open', ?, ?, ?, ?)
+  `).run(id, category.trim().toLowerCase(), title.trim(), est, note?.trim() || null, maxSort + 1, me?.username || 'jarvis', ts, ts);
+  res.json({ id });
+});
+
+router.patch('/wishlist/:id', (req, res) => {
+  if (!requireParent(req, res)) return;
+  const row = db.prepare('SELECT * FROM financeWishlist WHERE id = ?').get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'not found' });
+  const { category, title, estimatePounds, note, status } = req.body || {};
+  if (status !== undefined && !WISH_STATUSES.has(status)) return res.status(400).json({ error: 'bad status' });
+  const est = estimatePounds === null ? null
+    : typeof estimatePounds === 'number' && Number.isFinite(estimatePounds) ? Math.round(estimatePounds * 100)
+    : undefined;
+  db.prepare(`
+    UPDATE financeWishlist SET
+      category = ?, title = ?, estimateMinor = ?, note = ?, status = ?, updatedAt = ?
+    WHERE id = ?
+  `).run(
+    category?.trim().toLowerCase() || row.category,
+    title?.trim() || row.title,
+    est !== undefined ? est : row.estimateMinor,
+    note !== undefined ? (note?.trim() || null) : row.note,
+    status || row.status,
+    new Date().toISOString(),
+    row.id
+  );
+  res.json({ ok: true });
+});
+
+router.delete('/wishlist/:id', (req, res) => {
+  if (!requireParent(req, res)) return;
+  const gone = db.prepare('DELETE FROM financeWishlist WHERE id = ?').run(req.params.id);
+  if (!gone.changes) return res.status(404).json({ error: 'not found' });
+  res.json({ ok: true });
+});
+
 // ---- POST /api/finance/asset-value  { key, valuePounds | valueMinor, date?, source?, note? } ----
 router.post('/asset-value', (req, res) => {
   if (!requireParent(req, res)) return;

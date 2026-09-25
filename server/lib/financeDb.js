@@ -63,6 +63,22 @@ db.exec(`
     UNIQUE (assetId, date)
   );
 
+  -- House/household wishlist: wanted-but-not-committed spending, grouped by
+  -- category, with rough budgets. Estimates are optional (some jobs are free,
+  -- just effort). status: 'open' | 'done' | 'dropped'.
+  CREATE TABLE IF NOT EXISTS financeWishlist (
+    id TEXT PRIMARY KEY,
+    category TEXT NOT NULL,
+    title TEXT NOT NULL,
+    estimateMinor INTEGER,
+    note TEXT,
+    status TEXT NOT NULL DEFAULT 'open',
+    sortOrder INTEGER NOT NULL DEFAULT 0,
+    createdBy TEXT,
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS financeMortgages (
     id TEXT PRIMARY KEY,
     key TEXT NOT NULL UNIQUE,
@@ -151,6 +167,47 @@ const insMortgage = db.prepare(`
 `);
 for (const m of SEED_MORTGAGES) {
   if (!hasMortgage.get(m.key)) insMortgage.run({ ...m, id: randomUUID(), now: now() });
+}
+
+// Wishlist seed: the house items from Rob's old finance spreadsheet (shared
+// 25 Sep 2026). Estimates are his 2024-ish guesses, so treat as rough. Only
+// seeds when the table is empty, so pruned items stay pruned.
+const SEED_WISHLIST = [
+  { category: 'decorating', title: 'Repaint hallway', est: 40 },
+  { category: 'decorating', title: 'Repaint living room', est: 30 },
+  { category: 'decorating', title: 'Repaint games room', est: 100, note: 'Mural wall again?' },
+  { category: 'carpets & floors', title: 'Carpet: landing', est: 300 },
+  { category: 'carpets & floors', title: 'Carpet: clothes room', est: 100 },
+  { category: 'carpets & floors', title: "Carpet: Dexter's room", est: 150 },
+  { category: 'carpets & floors', title: 'Carpet: games room', est: 300 },
+  { category: 'carpets & floors', title: 'Carpet: living room', est: 1000 },
+  { category: 'doors & windows', title: 'Front door', est: 1500 },
+  { category: 'doors & windows', title: 'French doors', est: 1500 },
+  { category: 'doors & windows', title: 'Internal door: living room', est: 150 },
+  { category: 'doors & windows', title: 'Internal door: games room', est: 150 },
+  { category: 'garden', title: 'Roller', est: 100, note: 'Needs dry weather' },
+  { category: 'garden', title: 'Re-seed lawn', est: 20 },
+  { category: 'garden', title: 'Remove trampoline' },
+  { category: 'garden', title: 'Get rid of old bikes' },
+  { category: 'garden', title: 'Clean & repoint patio', est: 40 },
+  { category: 'garden', title: 'Clear front garden' },
+  { category: 'garden', title: 'New dog fence', est: 40 },
+  { category: 'house & tech', title: 'Tablet for snug', est: 400 },
+  { category: 'house & tech', title: 'Mount snug TV + soundbar', est: 60, note: 'Need to buy M5 posts' },
+  { category: 'house & tech', title: 'LED lights + coving, bedroom corridor', est: 200 },
+  { category: 'house & tech', title: 'Presence sensors', est: 10 },
+  { category: 'house & tech', title: 'Shelves for garage', est: 100, note: 'Lots of effort to clear the garage first' },
+  { category: 'house & tech', title: 'Ikea Alex drawers x2', est: 225 },
+];
+
+if (!db.prepare('SELECT id FROM financeWishlist LIMIT 1').get()) {
+  const insWish = db.prepare(`
+    INSERT INTO financeWishlist (id, category, title, estimateMinor, note, status, sortOrder, createdBy, createdAt, updatedAt)
+    VALUES (?, ?, ?, ?, ?, 'open', ?, 'rob', ?, ?)
+  `);
+  SEED_WISHLIST.forEach((w, i) => {
+    insWish.run(randomUUID(), w.category, w.title, w.est != null ? w.est * 100 : null, w.note || null, i, now(), now());
+  });
 }
 
 // Payments verified against the actual HSBC direct debits in the Starling joint
