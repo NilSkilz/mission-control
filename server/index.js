@@ -33,8 +33,11 @@ app.use(cors());
 // 5mb: the finance ingest pushes transaction batches well past the 100kb default
 app.use(express.json({ limit: '5mb' }));
 
-// Health check endpoint
-app.get('/health', (req, res) => {
+// Health check endpoint (JSON for monitors/curl). A browser navigating to
+// /health wants the SPA's health page, not the API status, so requests that
+// prefer HTML fall through to the app-shell catch-all instead.
+app.get('/health', (req, res, next) => {
+  if (req.accepts(['json', 'html']) === 'html') return next();
   res.status(200).json({ status: 'ok', service: 'mission-control-api' });
 });
 
@@ -205,7 +208,7 @@ function setupStaticFrontend() {
     },
   }));
   app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path === '/health' || req.path === '/ws') return next();
+    if (req.path.startsWith('/api') || req.path === '/ws') return next();
     // The app shell must never be cached, or PWAs get stuck on an old build.
     res.setHeader('Cache-Control', 'no-store');
     res.sendFile(path.join(distDir, 'index.html'));
