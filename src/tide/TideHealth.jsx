@@ -3,6 +3,7 @@ import { useUser } from '../context/UserContext'
 import { Label, Ring, EmptyHint } from './widgets'
 import {
   getHealthDay, addFood, addExercise, deleteFood, deleteExercise, setCalorieTarget,
+  addHabit, resetHabit, deleteHabit,
 } from '../lib/data'
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack']
@@ -159,6 +160,85 @@ function AddExercise({ onAdd }) {
   )
 }
 
+// One "days since" counter. Counts up from the last slip; under a day it shows
+// hours so a fresh reset doesn't read as a smug zero. The reset button is
+// deliberately heavy: first tap arms it, second tap within 4s confirms, and
+// walking away disarms it. Best streak sticks around as the number to beat.
+function HabitCard({ habit, onReset, onDelete }) {
+  const [armed, setArmed] = useState(false)
+  const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    if (!armed) return
+    const t = setTimeout(() => setArmed(false), 4000)
+    return () => clearTimeout(t)
+  }, [armed])
+
+  const ms = Math.max(0, Date.now() - new Date(habit.startedAt).getTime())
+  const days = Math.floor(ms / 86400000)
+  const hours = Math.floor(ms / 3600000)
+  const big = days > 0 ? days : hours
+  const unit = days > 0 ? (days === 1 ? 'day' : 'days') : (hours === 1 ? 'hour' : 'hours')
+  const best = Math.max(habit.bestDays, days)
+
+  const press = async () => {
+    if (!armed) { setArmed(true); return }
+    setBusy(true)
+    await onReset()
+    setArmed(false); setBusy(false)
+  }
+
+  return (
+    <div className="tide-card" style={{ padding: '16px 16px 14px', flex: '1 1 160px', minWidth: 160, position: 'relative', textAlign: 'center' }}>
+      <button aria-label={`delete ${habit.name}`} onClick={() => { if (window.confirm(`Delete "${habit.name}"? The streak goes with it.`)) onDelete() }}
+        style={{ position: 'absolute', top: 8, right: 10, background: 'none', border: 'none', color: 'var(--tide-faint)', cursor: 'pointer', fontSize: 12 }}>✕</button>
+      <div style={{ fontSize: 40, fontWeight: 700, lineHeight: 1, color: 'var(--tide-ink)', marginTop: 6 }}>{big}</div>
+      <div className="tide-sub" style={{ fontSize: 12, marginTop: 4 }}>{unit} since</div>
+      <div style={{ fontSize: 15, fontWeight: 600, marginTop: 2, overflowWrap: 'anywhere' }}>{habit.name}</div>
+      <div className="tide-sub" style={{ fontSize: 11, marginTop: 6, minHeight: 14 }}>
+        {habit.resetCount > 0 ? `best ${best} ${best === 1 ? 'day' : 'days'} · ${habit.resetCount} ${habit.resetCount === 1 ? 'reset' : 'resets'}` : 'first streak, no resets'}
+      </div>
+      <button onClick={press} disabled={busy}
+        className="tide-btn"
+        style={{
+          marginTop: 10, width: '100%', padding: '9px 0', fontSize: 13, fontWeight: 600,
+          borderRadius: 10, cursor: 'pointer', transition: 'all 150ms ease',
+          border: '1px solid',
+          borderColor: armed ? OVER : 'var(--tide-hair)',
+          background: armed ? OVER : 'none',
+          color: armed ? '#fff' : 'var(--tide-faint)',
+        }}>
+        {busy ? '…' : armed ? 'sure? tap again' : 'I did the thing'}
+      </button>
+    </div>
+  )
+}
+
+// New-counter form: name + optional "when did you last do it" backdate.
+function AddHabit({ onAdd }) {
+  const [name, setName] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [busy, setBusy] = useState(false)
+  const today = new Date().toLocaleDateString('en-CA')
+  const submit = async (e) => {
+    e.preventDefault()
+    if (!name.trim()) return
+    setBusy(true)
+    await onAdd({ name: name.trim(), startDate: startDate || undefined })
+    setName(''); setStartDate(''); setBusy(false)
+  }
+  return (
+    <form onSubmit={submit} className="tide-card" style={{ padding: 16 }}>
+      <Label>new counter</Label>
+      <input className="tide-input" placeholder="e.g. takeaway, energy drinks, nail biting" value={name} onChange={(e) => setName(e.target.value)} />
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginTop: 10 }}>
+        <span className="tide-sub" style={{ fontSize: 12 }}>last time (optional)</span>
+        <input className="tide-input" style={{ flex: '0 1 160px' }} type="date" max={today} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+        <button className="tide-btn tide-btn-primary" style={{ padding: '9px 18px', marginLeft: 'auto' }} disabled={busy || !name.trim()}>add</button>
+      </div>
+    </form>
+  )
+}
+
 function EntryRow({ left, mid, right, onDelete }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--tide-hair)' }}>
@@ -252,6 +332,9 @@ export default function TideHealth() {
   const saveTarget = async (t) => { await setCalorieTarget(person.id, t); reload() }
   const removeFood = async (id) => { await deleteFood(id); reload() }
   const removeExercise = async (id) => { await deleteExercise(id); reload() }
+  const createHabit = async (entry) => { await addHabit({ ...entry, userId: person.id }); reload() }
+  const slipHabit = async (id) => { await resetHabit(id); reload() }
+  const removeHabit = async (id) => { await deleteHabit(id); reload() }
 
   const foodByMeal = MEAL_TYPES
     .map((m) => ({ meal: m, items: person.food.filter((f) => f.mealType === m) }))
@@ -280,6 +363,19 @@ export default function TideHealth() {
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <TargetEditor person={person} onSave={saveTarget} />
         </div>
+
+        <div>
+          <Label>days since</Label>
+          {(person.habits || []).length === 0 && (
+            <EmptyHint>no counters yet. add one below and watch the number climb.</EmptyHint>
+          )}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
+            {(person.habits || []).map((h) => (
+              <HabitCard key={h.id} habit={h} onReset={() => slipHabit(h.id)} onDelete={() => removeHabit(h.id)} />
+            ))}
+          </div>
+        </div>
+        <AddHabit onAdd={createHabit} />
 
         <AddFood onAdd={logFood} />
         <AddExercise onAdd={logExercise} />

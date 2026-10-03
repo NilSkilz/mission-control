@@ -195,6 +195,22 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_exercise_user_date ON exerciseLog(userId, date);
 
+  -- "Days since" habit counters (parents only, shown on the health page).
+  -- Each row is one habit being broken; the card counts up from startedAt.
+  -- Resetting restarts the clock, bumps resetCount and keeps the longest
+  -- completed streak in bestDays as the number to beat.
+  CREATE TABLE IF NOT EXISTS habitCounters (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL REFERENCES users(id),
+    name TEXT NOT NULL,
+    startedAt TEXT NOT NULL,                  -- ISO instant the current streak began
+    bestDays INTEGER NOT NULL DEFAULT 0,      -- longest completed streak, whole days
+    resetCount INTEGER NOT NULL DEFAULT 0,
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_habits_user ON habitCounters(userId);
+
   -- Private journal + mood tracking (parents only, and PER-PERSON private:
   -- each parent only ever sees their own rows; enforced in the route by scoping
   -- every query to the acting user's id. One table serves both jobs — a row can

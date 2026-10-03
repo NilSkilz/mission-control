@@ -647,6 +647,7 @@ router.get('/health/day', (req, res) => {
     return {
       id: u.id, name: u.displayName, color: u.color, target: u.calorieTarget,
       eaten, burned, net: eaten - burned, steps, stepGoal: STEP_GOAL, food, exercise, week,
+      habits: list('habitCounters', { userId: u.id }),
     };
   });
   res.json({ date, today: todayLocal(), users });
@@ -751,6 +752,42 @@ function deleteHealthEntry(table) {
 }
 router.delete('/health/food/:id', deleteHealthEntry('foodLog'));
 router.delete('/health/exercise/:id', deleteHealthEntry('exerciseLog'));
+
+// ==================== HABIT COUNTERS ("days since", PARENTS ONLY) ====================
+// Habit-breaking counters a la the "Days Since" app: each one counts up from
+// the moment of the last slip, and the reset button is the one you really
+// don't want to press. Delivered through /health/day (habits per user above).
+
+// POST /health/habits  { name, userId?, startDate? }
+// startDate (YYYY-MM-DD) backdates the counter to "I last did this on <date>".
+router.post('/health/habits', (req, res) => {
+  const me = requireParent(req, res); if (!me) return;
+  const name = String(req.body.name || '').trim();
+  if (!name) return res.status(400).json({ error: 'name required' });
+  const userId = targetParentId(req, me);
+  if (!userId) return res.status(400).json({ error: 'invalid user' });
+  let startedAt = new Date().toISOString();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(req.body.startDate || '')) {
+    const d = new Date(req.body.startDate + 'T12:00:00');
+    if (!isNaN(d) && d.getTime() <= Date.now()) startedAt = d.toISOString();
+  }
+  const row = create('habitCounters', { userId, name: name.slice(0, 100), startedAt });
+  res.status(201).json(row);
+});
+
+// POST /health/habits/:id/reset — the slip. Restart the clock, remember the best streak.
+router.post('/health/habits/:id/reset', (req, res) => {
+  if (!requireParent(req, res)) return;
+  const row = get('habitCounters', req.params.id);
+  if (!row) return res.status(404).json({ error: 'not found' });
+  const streakDays = Math.max(0, Math.floor((Date.now() - new Date(row.startedAt).getTime()) / 86400000));
+  const now = new Date().toISOString();
+  db.prepare('UPDATE habitCounters SET startedAt=?, bestDays=?, resetCount=resetCount+1, updatedAt=? WHERE id=?')
+    .run(now, Math.max(row.bestDays, streakDays), now, req.params.id);
+  res.json(get('habitCounters', req.params.id));
+});
+
+router.delete('/health/habits/:id', deleteHealthEntry('habitCounters'));
 
 // ==================== JOURNAL + MOOD (PARENTS ONLY, PER-PERSON PRIVATE) ====================
 // Rob + Aimee each keep a private journal and mood log. Unlike health, there is

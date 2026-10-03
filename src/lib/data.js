@@ -654,6 +654,15 @@ export async function deleteExercise(id) {
 export async function setCalorieTarget(userId, calorieTarget) {
   return request('/health/target', { method: 'PATCH', body: { userId, calorieTarget } })
 }
+export async function addHabit(entry) {
+  return request('/health/habits', { method: 'POST', body: entry })
+}
+export async function resetHabit(id) {
+  return request(`/health/habits/${id}/reset`, { method: 'POST' })
+}
+export async function deleteHabit(id) {
+  await request(`/health/habits/${id}`, { method: 'DELETE' })
+}
 
 // ==================== JOURNAL + MOOD (parents only, per-person private) ====================
 export async function getJournal(range = 30) {
