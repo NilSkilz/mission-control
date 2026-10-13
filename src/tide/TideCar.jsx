@@ -101,10 +101,11 @@ function headline(car, charger) {
     }
   }
   if (car.home && (car.plugged || charger.cable)) {
-    if (charger.status === 'waiting-for-schedule') {
+    const full = (car.soc ?? 0) >= (car.target ?? 80) - 1
+    if (charger.status === 'waiting-for-schedule' || (charger.auto && !full)) {
       return { charging, title: 'plugged in, waiting', sub: `charges from 00:30 at ${charger.nightRate ?? 9.5}p` }
     }
-    if ((car.soc ?? 0) >= (car.target ?? 80) - 1) return { charging, title: 'plugged in and full', sub: `sat at its ${pct(car.target)} limit` }
+    if (full) return { charging, title: 'plugged in and full', sub: `sat at its ${pct(car.target)} limit` }
     return { charging, title: 'plugged in', sub: charger.status ? charger.status.replace(/-/g, ' ') : '' }
   }
   if (car.home) return { charging, title: 'parked at home', sub: 'not plugged in' }
@@ -202,7 +203,7 @@ function TariffCard({ charger, window }) {
         </div>
       </div>
       <div className="tide-sub" style={{ fontSize: 11, marginTop: 12 }}>
-        pod point {charger.online ? 'online' : 'offline ⚠️'} · {charger.smart ? 'smart schedule on' : 'manual: charges any time'}
+        pod point {charger.online ? 'online' : 'offline ⚠️'} · {charger.auto ? 'waits for 00:30 · start it from the car to charge now' : charger.smart ? 'smart schedule on' : 'manual: charges any time'}
       </div>
     </Card>
   )
