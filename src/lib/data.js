@@ -475,6 +475,15 @@ export async function haEnergyWeek() {
   } catch { return null }
 }
 
+// MG4 + Pod Point + tariff costs + home electricity for the house > car tab (parents only).
+export async function haCar() {
+  try {
+    const res = await fetch(`${HA_BASE}/car`, { headers: authHeaders() })
+    if (!res.ok) return null
+    return (await res.json()).data || null
+  } catch { return null }
+}
+
 export async function haCall(domain, service, entity_id, data = {}) {
   const res = await fetch(`${HA_BASE}/service`, {
     method: 'POST',

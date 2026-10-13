@@ -1,5 +1,7 @@
 import express from 'express'
 import axios from 'axios'
+import WebSocket from 'ws'
+import { list } from '../lib/familyDb.js'
 
 const router = express.Router()
 
@@ -838,6 +840,190 @@ router.get('/energy-week', async (req, res) => {
     })
   } catch (error) {
     console.error('Energy Week API Error:', error)
+    res.json({ success: true, data: null, error: error.message })
+  }
+})
+
+// ==================== CAR (MG4 + Pod Point) ====================
+// One payload for the Tide house > car tab: live car/charger state, real
+// tariff costs and home electricity, all from HA. Parents only (it carries
+// money and where the car is). Long-term numbers come from HA's recorder
+// statistics over the websocket API, since REST has no statistics endpoint.
+
+const CAR = 'mg_mg4_electric'
+const CHARGER = 'psl_557234'
+const SHELLY = 'shellyem_34945470ed50'
+const S = {
+  soc: `sensor.${CAR}_state_of_charge`,
+  range: `sensor.${CAR}_electric_range`,
+  status: `sensor.${CAR}_charging_status`,
+  carPower: `sensor.${CAR}_charging_power`,
+  remaining: `sensor.${CAR}_remaining_charging_time`,
+  target: `number.${CAR}_target_soc`,
+  where: `device_tracker.${CAR}_gps_location`,
+  lock: `lock.${CAR}_lock`,
+  amps: `select.${CAR}_charging_current_limit`,
+  gun: `binary_sensor.${CAR}_charging_gun_state`,
+  mileage: `sensor.${CAR}_mileage`,
+  inside: `sensor.${CAR}_interior_temperature`,
+  outside: `sensor.${CAR}_exterior_temperature`,
+  aux: `sensor.${CAR}_ancillary_battery_voltage`,
+  efficiency: `sensor.${CAR}_efficiency_since_last_charge`,
+  updated: `sensor.${CAR}_last_update_time`,
+  tyreFL: `sensor.${CAR}_tyre_pressure_front_left`,
+  tyreFR: `sensor.${CAR}_tyre_pressure_front_right`,
+  tyreRL: `sensor.${CAR}_tyre_pressure_rear_left`,
+  tyreRR: `sensor.${CAR}_tyre_pressure_rear_right`,
+  podStatus: `sensor.${CHARGER}_status`,
+  podCable: `binary_sensor.${CHARGER}_cable_status`,
+  podCloud: `binary_sensor.${CHARGER}_cloud_connection`,
+  smart: `switch.${CHARGER}_smart_charge_mode`,
+  chargerW: `sensor.${SHELLY}_channel_2_power`,
+  houseW: `sensor.${SHELLY}_channel_1_power`,
+  rate: 'sensor.ev_current_rate',
+  costRate: 'sensor.ev_charging_cost_rate',
+  sessionCost: 'sensor.ev_session_cost',
+  sessionKwh: 'sensor.ev_session_energy',
+  dayRate: 'input_number.ev_day_rate',
+  nightRate: 'input_number.ev_night_rate',
+}
+const DOORS = ['door_front_left', 'door_front_right', 'door_rear_left', 'door_rear_right', 'boot_status', 'bonnet_status']
+  .map((k) => `binary_sensor.${CAR}_${k}`)
+const WINDOWS = ['window_front_left', 'window_front_right', 'window_rear_left', 'window_rear_right']
+  .map((k) => `binary_sensor.${CAR}_${k}`)
+const STAT = {
+  cost: 'sensor.ev_charging_cost',
+  car: `sensor.${SHELLY}_channel_2_energy`,
+  house: `sensor.${SHELLY}_channel_1_energy`,
+  exported: `sensor.${SHELLY}_channel_1_energy_returned`,
+}
+
+function haStats(statisticIds, start, period) {
+  return new Promise((resolve, reject) => {
+    const url = ha.baseURL.replace(/^http/, 'ws') + '/api/websocket'
+    const ws = new WebSocket(url)
+    const timer = setTimeout(() => { ws.terminate(); reject(new Error('HA statistics timed out')) }, 8000)
+    ws.on('error', (e) => { clearTimeout(timer); reject(e) })
+    ws.on('message', (raw) => {
+      const m = JSON.parse(raw)
+      if (m.type === 'auth_required') ws.send(JSON.stringify({ type: 'auth', access_token: ha.token }))
+      else if (m.type === 'auth_invalid') { clearTimeout(timer); ws.close(); reject(new Error('HA auth failed')) }
+      else if (m.type === 'auth_ok') {
+        ws.send(JSON.stringify({
+          id: 1, type: 'recorder/statistics_during_period', start_time: start.toISOString(),
+          period, types: ['change'], statistic_ids: statisticIds,
+        }))
+      } else if (m.id === 1) {
+        clearTimeout(timer); ws.close()
+        m.success ? resolve(m.result || {}) : reject(new Error(m.error?.message || 'statistics failed'))
+      }
+    })
+  })
+}
+
+const londonDay = (ms) => new Date(ms).toLocaleDateString('en-CA', { timeZone: 'Europe/London' })
+
+let carCache = { at: 0, data: null }
+
+router.get('/car', async (req, res) => {
+  const me = list('users').find((u) => (req.isJarvis ? u.username === req.jarvisUser : u.id === req.userId))
+  if (!(req.isJarvis && !req.jarvisUser) && me?.role !== 'parent') {
+    return res.status(403).json({ success: false, error: 'parents only' })
+  }
+  if (carCache.data && Date.now() - carCache.at < 45000) return res.json({ success: true, data: carCache.data })
+
+  try {
+    const all = await ha.getStates()
+    const byId = Object.fromEntries(all.map((e) => [e.entity_id, e]))
+    const st = (id) => byId[id]?.state
+    const n = (id) => num(st(id))
+
+    const now = new Date()
+    const dayStart = new Date(now); dayStart.setDate(now.getDate() - 34); dayStart.setHours(0, 0, 0, 0)
+    const hourStart = new Date(now.getTime() - 24 * 3600 * 1000)
+    const ids = Object.values(STAT)
+    const [daily, hourly, socHist] = await Promise.all([
+      haStats(ids, dayStart, 'day').catch(() => ({})),
+      haStats(ids, hourStart, 'hour').catch(() => ({})),
+      ha.client.get(`/history/period/${new Date(now.getTime() - 48 * 3600 * 1000).toISOString()}`, {
+        params: { filter_entity_id: S.soc, end_time: now.toISOString(), minimal_response: true, no_attributes: true },
+      }).then((r) => (r.data?.[0] || [])).catch(() => []),
+    ])
+
+    const series = (stats, key) => Object.fromEntries((stats[key] || []).map((r) => [r.start, Math.max(0, r.change || 0)]))
+    const join = (stats) => {
+      const cost = series(stats, STAT.cost), car = series(stats, STAT.car), house = series(stats, STAT.house), exp = series(stats, STAT.exported)
+      const starts = [...new Set([...Object.keys(cost), ...Object.keys(car), ...Object.keys(house)])].map(Number).sort((a, b) => a - b)
+      return starts.map((t) => ({ t, cost: round2(cost[t] || 0), car: round2(car[t] || 0), house: round2(house[t] || 0), exported: round2(exp[t] || 0) }))
+    }
+    const days = join(daily).map((d) => ({ ...d, date: londonDay(d.t) }))
+    const hours = join(hourly).filter((h) => h.t >= hourStart.getTime() - 3600 * 1000)
+
+    // Spend windows, London calendar.
+    const today = londonDay(now.getTime())
+    const shift = (k) => { const d = new Date(now); d.setDate(d.getDate() + k); return londonDay(d.getTime()) }
+    const dow = (now.getDay() + 6) % 7 // Monday = 0
+    const sumFrom = (from, to = today) => round2(days.filter((d) => d.date >= from && d.date <= to).reduce((a, d) => a + d.cost, 0))
+    const spend = {
+      today: sumFrom(today),
+      yesterday: sumFrom(shift(-1), shift(-1)),
+      week: sumFrom(shift(-dow)),
+      month: sumFrom(today.slice(0, 8) + '01'),
+    }
+    const kwhMonth = round2(days.filter((d) => d.date >= today.slice(0, 8) + '01').reduce((a, d) => a + d.car, 0))
+
+    const tyres = {}
+    for (const k of ['FL', 'FR', 'RL', 'RR']) tyres[k] = n(S[`tyre${k}`])
+
+    const data = {
+      car: {
+        soc: n(S.soc),
+        rangeMiles: n(S.range) != null ? Math.round(n(S.range) * 0.621371) : null,
+        status: st(S.status) || null,
+        powerKw: n(S.carPower),
+        remainingMin: n(S.remaining),
+        target: n(S.target),
+        home: st(S.where) === 'home',
+        where: st(S.where) || null,
+        locked: st(S.lock) === 'locked',
+        amps: st(S.amps) || null,
+        plugged: st(S.gun) === 'on',
+        mileage: n(S.mileage) != null ? Math.round(n(S.mileage) * 0.621371) : null,
+        insideC: n(S.inside),
+        outsideC: n(S.outside),
+        auxV: n(S.aux),
+        // km/kWh from the car -> mi/kWh
+        efficiency: n(S.efficiency) != null ? round2(n(S.efficiency) * 0.621371) : null,
+        updated: st(S.updated) || null,
+        tyres,
+        tyreUnit: byId[S.tyreFL]?.attributes?.unit_of_measurement || 'bar',
+        open: [...DOORS, ...WINDOWS].filter((id) => st(id) === 'on')
+          .map((id) => id.replace(`binary_sensor.${CAR}_`, '').replace(/_status$/, '').replace(/_/g, ' ')),
+      },
+      charger: {
+        status: st(S.podStatus) || null,
+        cable: st(S.podCable) === 'on',
+        online: st(S.podCloud) === 'on',
+        smart: st(S.smart) === 'on',
+        watts: n(S.chargerW),
+        rate: n(S.rate),
+        dayRate: n(S.dayRate),
+        nightRate: n(S.nightRate),
+        perHour: n(S.costRate),
+        session: { cost: n(S.sessionCost), kwh: n(S.sessionKwh) },
+      },
+      house: { watts: n(S.houseW) },
+      spend,
+      kwhMonth,
+      days: days.slice(-30),
+      hours,
+      soc: socHist.map((p) => ({ t: Date.parse(p.last_changed || p.last_updated), v: num(p.state) })).filter((p) => p.v != null),
+      window: { start: '00:30', end: '05:30' },
+    }
+    carCache = { at: Date.now(), data }
+    res.json({ success: true, data, timestamp: now.toISOString() })
+  } catch (error) {
+    console.error('Car API Error:', error)
     res.json({ success: true, data: null, error: error.message })
   }
 })

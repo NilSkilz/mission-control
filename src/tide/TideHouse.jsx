@@ -5,6 +5,8 @@ import { haStates, haCall } from '../lib/data'
 import { controlsFor, HOUSE_TEMP_SENSOR, HA_LINK } from './houseConfig'
 import TideThermostat from './TideThermostat'
 import TideEnergy from './TideEnergy'
+import TideCar from './TideCar'
+import { useSearchParams } from 'react-router-dom'
 
 const ON_STATES = new Set(['on', 'open', 'home', 'playing', 'heat', 'cool'])
 
@@ -29,6 +31,9 @@ export default function TideHouse() {
   const [temp, setTemp] = useState(null)
   const [offline, setOffline] = useState(false)
   const [busy, setBusy] = useState(null)
+  const [params, setParams] = useSearchParams()
+  const isParent = user?.role === 'parent'
+  const tab = isParent && params.get('tab') === 'car' ? 'car' : 'home'
 
   const entityIds = controls.map((c) => c.entity_id)
 
@@ -78,8 +83,21 @@ export default function TideHouse() {
         <div className="tide-greet" style={{ fontSize: 'clamp(24px,5vw,30px)' }}><span className="tide-grad">house</span></div>
         <a href={HA_LINK} target="_blank" rel="noreferrer" className="tide-pill" style={{ marginLeft: 'auto', textDecoration: 'none' }}>open home assistant ↗</a>
       </div>
-      <p className="tide-sub" style={{ marginTop: 6 }}>your corner of the house · everything else lives in HA</p>
+      <p className="tide-sub" style={{ marginTop: 6 }}>{tab === 'car' ? 'the mg4, the charger and what it all costs' : 'your corner of the house · everything else lives in HA'}</p>
 
+      {isParent && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 14 }} role="tablist">
+          {[['home', '🏠 home'], ['car', '🚗 car']].map(([key, label]) => (
+            <button key={key} role="tab" aria-selected={tab === key} className="tide-pill"
+              onClick={() => setParams(key === 'car' ? { tab: 'car' } : {}, { replace: true })}
+              style={{ fontSize: 14, padding: '8px 16px', ...(tab === key ? { background: 'var(--tide-grad)', color: '#fff', borderColor: 'transparent' } : {}) }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {tab === 'car' ? <TideCar /> : <>
       <TideThermostat />
 
       <TideEnergy />
@@ -124,6 +142,7 @@ export default function TideHouse() {
           </button>
         </div>
       )}
+      </>}
     </div>
   )
 }
