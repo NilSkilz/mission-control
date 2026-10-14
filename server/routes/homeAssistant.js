@@ -938,6 +938,9 @@ router.get('/car', async (req, res) => {
     const byId = Object.fromEntries(all.map((e) => [e.entity_id, e]))
     const st = (id) => byId[id]?.state
     const n = (id) => num(st(id))
+    // HA may display the car's distances in km or miles; normalise to miles either way.
+    const unit = (id) => byId[id]?.attributes?.unit_of_measurement
+    const miles = (id) => (n(id) == null ? null : /^mi/.test(unit(id) || '') ? n(id) : n(id) * 0.621371)
 
     const now = new Date()
     const dayStart = new Date(now); dayStart.setDate(now.getDate() - 34); dayStart.setHours(0, 0, 0, 0)
@@ -979,7 +982,7 @@ router.get('/car', async (req, res) => {
     const data = {
       car: {
         soc: n(S.soc),
-        rangeMiles: n(S.range) != null ? Math.round(n(S.range) * 0.621371) : null,
+        rangeMiles: miles(S.range) != null ? Math.round(miles(S.range)) : null,
         status: st(S.status) || null,
         powerKw: n(S.carPower),
         remainingMin: n(S.remaining),
@@ -989,12 +992,11 @@ router.get('/car', async (req, res) => {
         locked: st(S.lock) === 'locked',
         amps: st(S.amps) || null,
         plugged: st(S.gun) === 'on',
-        mileage: n(S.mileage) != null ? Math.round(n(S.mileage) * 0.621371) : null,
+        mileage: miles(S.mileage) != null ? Math.round(miles(S.mileage)) : null,
         insideC: n(S.inside),
         outsideC: n(S.outside),
         auxV: n(S.aux),
-        // km/kWh from the car -> mi/kWh
-        efficiency: n(S.efficiency) != null ? round2(n(S.efficiency) * 0.621371) : null,
+        efficiency: miles(S.efficiency) != null ? round2(miles(S.efficiency)) : null, // mi/kWh
         updated: st(S.updated) || null,
         tyres,
         tyreUnit: byId[S.tyreFL]?.attributes?.unit_of_measurement || 'bar',
